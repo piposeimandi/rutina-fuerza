@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Rutina Fuerza</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Entrenamiento de fuerza</p>
+          <h1>Rutina Fuerza</h1>
+        </div>
+        <div class="actions">
+          <button id="import-data" class="secondary" type="button">Importar JSON</button>
+          <input id="file-input" type="file" accept="application/json" hidden />
+          <button id="export-data" class="primary" type="button">Exportar JSON</button>
+        </div>
+      </header>
+
+      <main class="layout">
+        <section class="panel overview">
+          <div class="stats">
+            <div class="stat-card">
+              <span>Sesiones</span>
+              <strong id="stat-sessions">0</strong>
+            </div>
+            <div class="stat-card">
+              <span>Volumen</span>
+              <strong id="stat-volume">0 kg</strong>
+            </div>
+            <div class="stat-card">
+              <span>Semana actual</span>
+              <strong id="stat-current-week">1</strong>
+            </div>
+            <div class="stat-card">
+              <span>Último registro</span>
+              <strong id="stat-last-date">-</strong>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel form-panel">
+          <div class="section-title-row">
+            <h2>Registrar entrenamiento</h2>
+            <button id="reset-data" class="danger" type="button">Resetear</button>
+          </div>
+
+          <form id="entry-form">
+            <div class="form-grid">
+              <label>
+                <span>Semana</span>
+                <select id="week" required>
+                  <option value="1">Semana 1</option>
+                  <option value="2">Semana 2</option>
+                  <option value="3">Semana 3</option>
+                  <option value="4">Semana 4</option>
+                  <option value="5">Semana 5</option>
+                  <option value="6">Semana 6</option>
+                  <option value="7">Semana 7</option>
+                  <option value="8">Semana 8</option>
+                  <option value="9">Semana 9</option>
+                  <option value="10">Semana 10</option>
+                  <option value="11">Semana 11</option>
+                  <option value="12">Semana 12</option>
+                </select>
+              </label>
+
+              <label>
+                <span>Día</span>
+                <select id="day" required>
+                  <option value="Lunes">Lunes</option>
+                  <option value="Miércoles">Miércoles</option>
+                  <option value="Viernes">Viernes</option>
+                </select>
+              </label>
+
+              <label class="full-width">
+                <span>Ejercicio</span>
+                <input id="exercise" type="text" placeholder="Press banca, sentadilla, remo..." required />
+              </label>
+
+              <label>
+                <span>Series</span>
+                <input id="sets" type="number" min="1" max="12" value="4" required />
+              </label>
+
+              <label>
+                <span>Repeticiones</span>
+                <input id="reps" type="number" min="1" max="20" value="8" required />
+              </label>
+
+              <label>
+                <span>Peso (kg)</span>
+                <input id="weight" type="number" min="0" step="0.5" value="0" required />
+              </label>
+
+              <label>
+                <span>Sensación (RPE)</span>
+                <input id="rpe" type="number" min="1" max="10" step="0.5" value="8" required />
+              </label>
+
+              <label class="full-width">
+                <span>Notas</span>
+                <textarea id="notes" rows="3" placeholder="Ej: mejor técnica, pausas largas, sensación buena..."></textarea>
+              </label>
+            </div>
+
+            <button class="primary submit-button" type="submit">Guardar registro</button>
+          </form>
+        </section>
+
+        <section class="panel timeline-panel">
+          <div class="section-title-row">
+            <h2>Plan de 12 semanas</h2>
+          </div>
+          <div id="weeks-grid" class="weeks-grid"></div>
+        </section>
+
+        <section class="panel table-panel">
+          <div class="section-title-row">
+            <h2>Historial</h2>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Semana</th>
+                  <th>Día</th>
+                  <th>Ejercicio</th>
+                  <th>Series</th>
+                  <th>Rep.</th>
+                  <th>Peso</th>
+                  <th>RPE</th>
+                  <th>Notas</th>
+                  <th>Acción</th>
+                </tr>
+              </thead>
+              <tbody id="entries-body"></tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
