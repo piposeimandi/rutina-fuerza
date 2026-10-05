@@ -1,350 +1,358 @@
-:root {
-  --bg: #0f172a;
-  --bg-soft: #111827;
-  --panel: rgba(15, 23, 42, 0.9);
-  --panel-strong: #111827;
-  --ink: #e5e7eb;
-  --muted: #9aa7b5;
-  --border: rgba(148, 163, 184, 0.22);
-  --accent: #38bdf8;
-  --accent-strong: #0ea5e9;
-  --done: #166534;
-  --done-strong: #22c55e;
-  --skipped: #4b5563;
-  --pending: #334155;
-  --warning: #f59e0b;
-  --danger: #ef4444;
-  --shadow: rgba(15, 23, 42, 0.28);
+const STORAGE_KEY = 'rutina-fuerza:v1';
+const PROGRAM_WEEKS = 12;
+const TRAINING_DAYS = [1, 3, 5];
+const DEFAULT_START = '2026-01-05';
+
+const state = {
+  startDate: DEFAULT_START,
+  selectedDate: null,
+  sessions: {},
+};
+
+const calendarBody = document.getElementById('calendarBody');
+const weekBadge = document.getElementById('weekBadge');
+const sessionInfo = document.getElementById('sessionMessage');
+const sessionForm = document.getElementById('sessionForm');
+const selectedDateLabel = document.getElementById('selectedDateLabel');
+const selectedWeekLabel = document.getElementById('selectedWeekLabel');
+const statusMessage = document.getElementById('statusMessage');
+
+const exerciseTemplate = document.getElementById('exerciseTemplate');
+const exerciseList = document.getElementById('exerciseList');
+const noteInput = document.getElementById('noteInput');
+const importInput = document.getElementById('importInput');
+const programInfo = document.getElementById('programInfo');
+
+// Configuración de ejercicios
+const EXERCISES = [
+  { name: 'Sentadilla', reps: '3x5', notes: 'Peso principal' },
+  { name: 'Press de banca', reps: '3x5', notes: 'Peso principal' },
+  { name: 'Peso muerto', reps: '1x5', notes: 'Peso principal' },
+  { name: 'Press militar', reps: '3x5', notes: 'Accesorio' },
+  { name: 'Deadlift rows', reps: '3x5', notes: 'Accesorio' },
+];
+
+function parseDateKey(value) {
+  if (typeof value !== 'string') return null;
+  const match = /^\d{4}-\d{2}-\d{2}$/.exec(value.trim());
+  if (!match) return null;
+  const date = new Date(`${value}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return null;
+  return date;
 }
 
-* { box-sizing: border-box; }
-
-html { color-scheme: light dark; }
-
-body {
-  margin: 0;
-  font-family: Arial, Helvetica, sans-serif;
-  background: linear-gradient(180deg, var(--bg), var(--bg-soft));
-  color: var(--ink);
+function toDateKey(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
 }
 
-button, input, textarea {
-  font: inherit;
-}
+function getProgramDates(startDate = state.startDate) {
+  const start = parseDateKey(startDate);
+  if (!start) return [];
 
-.app-header {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 2rem 1rem 1rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.eyebrow {
-  margin: 0 0 0.35rem;
-  color: var(--accent);
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  font-size: 0.72rem;
-  font-weight: 700;
-}
-
-h1, h2, h3, p { margin-top: 0; }
-
-h1 {
-  margin-bottom: 0;
-  font-size: clamp(1.8rem, 3vw, 2.5rem);
-}
-
-.week-badge {
-  background: rgba(56, 189, 248, 0.14);
-  border: 1px solid rgba(56, 189, 248, 0.45);
-  color: var(--accent);
-  border-radius: 999px;
-  padding: 0.6rem 1rem;
-  font-weight: 700;
-}
-
-.layout {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 1rem 1rem;
-  display: grid;
-  grid-template-columns: 1.3fr 1fr;
-  gap: 1rem;
-}
-
-.panel {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 18px;
-  box-shadow: 0 10px 25px var(--shadow);
-  padding: 1rem;
-}
-
-.backup-panel {
-  margin: 0 auto 2rem;
-  max-width: 1200px;
-  width: calc(100% - 2rem);
-}
-
-.toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
-}
-
-.btn {
-  appearance: none;
-  border: 1px solid var(--border);
-  background: rgba(17, 24, 39, 0.85);
-  color: var(--ink);
-  border-radius: 10px;
-  padding: 0.7rem 1rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: transform 0.15s ease, opacity 0.15s ease;
-}
-
-.btn:hover { transform: translateY(-1px); }
-.btn:active { transform: translateY(0); }
-
-.btn-primary { background: var(--accent); color: #031827; border-color: transparent; }
-.btn-done { background: var(--done); border-color: transparent; }
-.btn-skipped { background: var(--skipped); border-color: transparent; }
-.btn-ghost { background: transparent; }
-.btn-file {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.hint {
-  color: var(--muted);
-  margin-bottom: 1rem;
-}
-
-.legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  color: var(--muted);
-  font-size: 0.9rem;
-  margin-bottom: 1rem;
-}
-
-.dot {
-  width: 11px;
-  height: 11px;
-  border-radius: 50%;
-  display: inline-block;
-  margin-right: 0.45rem;
-  vertical-align: middle;
-}
-
-.dot-pending { background: var(--pending); }
-.dot-done { background: var(--done); }
-.dot-skipped { background: var(--skipped); }
-.dot-today { background: transparent; box-shadow: inset 0 0 0 2px var(--accent); }
-
-.grid-wrap { overflow-x: auto; }
-
-.grid {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 6px;
-}
-
-.grid th,
-.grid td {
-  padding: 0;
-  text-align: center;
-}
-
-.grid th {
-  color: var(--muted);
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-.cell {
-  width: 100%;
-  min-height: 72px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--pending);
-  color: var(--ink);
-  cursor: pointer;
-  padding: 0.45rem;
-  transition: border-color .15s ease, transform .15s ease;
-}
-
-.cell:hover { border-color: rgba(255,255,255,0.35); }
-.cell.done { background: var(--done); }
-.cell.skipped { background: var(--skipped); }
-.cell.today { outline: 2px solid var(--accent); }
-.cell.selected { outline: 2px solid #fff; }
-.cell strong { display: block; font-size: 1.1rem; }
-.cell small { display: block; opacity: 0.9; }
-
-.session-message {
-  min-height: 48px;
-  display: grid;
-  place-items: center start;
-  color: var(--muted);
-}
-
-.session-form { display: block; }
-.hidden { display: none !important; }
-
-.row {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-}
-
-.session-head {
-  margin-bottom: 1rem;
-  font-size: 0.95rem;
-}
-
-.label {
-  color: var(--muted);
-}
-
-.chip {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.25rem 0.6rem;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  color: var(--ink);
-  background: rgba(255,255,255,0.02);
-}
-
-.status-row {
-  margin-bottom: 1rem;
-}
-
-.exercise-list {
-  display: grid;
-  gap: 1rem;
-}
-
-.exercise-card {
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 1rem;
-  background: rgba(255,255,255,0.02);
-}
-
-.exercise-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  margin-bottom: 0.5rem;
-}
-
-.exercise-name {
-  margin: 0;
-}
-
-.exercise-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.25rem 0.5rem;
-  border-radius: 999px;
-  font-size: 0.72rem;
-  border: 1px solid var(--border);
-  color: var(--muted);
-}
-
-.exercise-meta {
-  color: var(--muted);
-  margin-bottom: 0.8rem;
-  font-size: 0.85rem;
-}
-
-.field {
-  margin-top: 0.9rem;
-}
-
-.field label {
-  display: block;
-  margin-bottom: 0.35rem;
-  color: var(--muted);
-  font-size: 0.8rem;
-}
-
-.weight-wrap {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.weight-input,
-.feel-input,
-.set-grid input,
-textarea {
-  width: 100%;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: rgba(15, 23, 42, 0.7);
-  color: var(--ink);
-  padding: 0.7rem 0.8rem;
-}
-
-.weight-input {
-  width: 6rem;
-}
-
-.unit {
-  color: var(--muted);
-}
-
-.set-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.5rem;
-}
-
-.note-field {
-  margin-top: 1rem;
-}
-
-.note-field label {
-  display: block;
-  color: var(--muted);
-  margin-bottom: 0.35rem;
-}
-
-textarea {
-  resize: vertical;
-  min-height: 90px;
-}
-
-.status-message {
-  min-height: 1.5rem;
-  color: var(--muted);
-  margin: 0;
-}
-
-.status-message.success { color: var(--done-strong); }
-.status-message.error { color: #fca5a5; }
-
-@media (max-width: 860px) {
-  .layout {
-    grid-template-columns: 1fr;
+  const dates = [];
+  let current = new Date(start);
+  for (let i = 0; i < PROGRAM_WEEKS * 7; i++) {
+    dates.push(new Date(current));
+    current.setDate(current.getDate() + 1);
   }
 
-  .app-header {
-    flex-direction: column;
-    align-items: flex-start;
+  return dates.filter((date) => TRAINING_DAYS.includes(date.getDay()));
+}
+
+function isTrainingDay(date) {
+  const value = date instanceof Date ? date : parseDateKey(date);
+  if (!(value instanceof Date) || Number.isNaN(value.getTime())) return false;
+  return TRAINING_DAYS.includes(value.getDay());
+}
+
+function weekForDate(dateValue) {
+  const date = dateValue instanceof Date ? dateValue : parseDateKey(dateValue);
+  if (!date) return 1;
+  const start = parseDateKey(state.startDate);
+  if (!start) return 1;
+  const diffDays = Math.floor((date - start) / 86400000);
+  if (diffDays < 0) return 1;
+  return Math.min(PROGRAM_WEEKS, Math.floor(diffDays / 7) + 1);
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) {
+      state.sessions = {};
+      return;
+    }
+    const parsed = JSON.parse(raw);
+    state.startDate = parsed.startDate || DEFAULT_START;
+    state.sessions = parsed.sessions || {};
+  } catch {
+    state.sessions = {};
   }
 }
+
+function saveState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({
+    startDate: state.startDate,
+    sessions: state.sessions,
+  }));
+}
+
+function getSession(dateKey) {
+  return state.sessions[dateKey] || null;
+}
+
+function setSession(dateKey, session) {
+  state.sessions[dateKey] = session;
+  saveState();
+}
+
+function deleteSession(dateKey) {
+  delete state.sessions[dateKey];
+  saveState();
+}
+
+function renderCalendar() {
+  const dates = getProgramDates();
+  const rows = [];
+  
+  for (let week = 1; week <= PROGRAM_WEEKS; week++) {
+    const cells = [];
+    dates.filter((date) => weekForDate(date) === week).forEach((date) => {
+      const key = toDateKey(date);
+      const session = getSession(key);
+      const cell = document.createElement('button');
+      cell.type = 'button';
+      cell.className = 'cell';
+
+      if (session && session.status === 'done') cell.classList.add('done');
+      if (session && session.status === 'skipped') cell.classList.add('skipped');
+      if (isSameDay(date, new Date())) cell.classList.add('today');
+      if (state.selectedDate === key) cell.classList.add('selected');
+
+      cell.innerHTML = `
+        <strong>${date.getDate()}</strong>
+        <small>${session ? (session.status === 'done' ? 'Hecha' : 'Omitida') : 'Pendiente'}</small>
+      `;
+
+      cell.addEventListener('click', () => {
+        state.selectedDate = key;
+        renderCalendar();
+        renderSession();
+      });
+      cells.push(cell);
+    });
+
+    const row = document.createElement('tr');
+    const weekCell = document.createElement('td');
+    weekCell.innerHTML = `<strong>W${week}</strong>`;
+    row.appendChild(weekCell);
+    cells.forEach((cell) => {
+      const td = document.createElement('td');
+      td.appendChild(cell);
+      row.appendChild(td);
+    });
+    rows.push(row);
+  }
+
+  calendarBody.innerHTML = '';
+  rows.forEach((row) => calendarBody.appendChild(row));
+  weekBadge.textContent = `Semana ${currentWeek()}`;
+  programInfo.textContent = `Inicio: ${state.startDate}`;
+}
+
+function currentWeek() {
+  return weekForDate(new Date());
+}
+
+function renderSession() {
+  if (!state.selectedDate) {
+    sessionInfo.classList.remove('hidden');
+    sessionForm.classList.add('hidden');
+    sessionInfo.textContent = 'Seleccioná una fecha del calendario.';
+    return;
+  }
+
+  const session = getSession(state.selectedDate) || {
+    date: state.selectedDate,
+    status: 'pending',
+    exercises: EXERCISES.map(() => ({ weight: 0, sets: [0, 0, 0], feel: '' })),
+    note: '',
+  };
+
+  sessionInfo.classList.add('hidden');
+  sessionForm.classList.remove('hidden');
+  selectedDateLabel.textContent = state.selectedDate;
+  selectedWeekLabel.textContent = `Semana ${weekForDate(state.selectedDate)}`;
+  noteInput.value = session.note || '';
+
+  // Renderizar ejercicios
+  exerciseList.innerHTML = '';
+  EXERCISES.forEach((ex, index) => {
+    const exData = session.exercises?.[index] || { weight: 0, sets: [0, 0, 0], feel: '' };
+    const clone = exerciseTemplate.content.cloneNode(true);
+    
+    clone.querySelector('.exercise-name').textContent = ex.name;
+    clone.querySelector('.exercise-badge').textContent = ex.reps;
+    clone.querySelector('.exercise-meta').textContent = ex.notes;
+    
+    const weightInput = clone.querySelector('.weight-input');
+    weightInput.value = exData.weight || 0;
+    weightInput.addEventListener('input', () => {
+      if (!state.selectedDate) return;
+      const current = getSession(state.selectedDate) || { exercises: EXERCISES.map(() => ({ weight: 0, sets: [0, 0, 0], feel: '' })), note: '' };
+      current.exercises[index].weight = Number(weightInput.value || 0);
+      setSession(state.selectedDate, { ...current, date: state.selectedDate, status: current.status || 'pending' });
+    });
+    
+    const feelInput = clone.querySelector('.feel-input');
+    feelInput.value = exData.feel || '';
+    feelInput.addEventListener('input', () => {
+      if (!state.selectedDate) return;
+      const current = getSession(state.selectedDate) || { exercises: EXERCISES.map(() => ({ weight: 0, sets: [0, 0, 0], feel: '' })), note: '' };
+      current.exercises[index].feel = feelInput.value;
+      setSession(state.selectedDate, { ...current, date: state.selectedDate, status: current.status || 'pending' });
+    });
+    
+    const setGrid = clone.querySelector('.set-grid');
+    setGrid.innerHTML = '';
+    for (let s = 0; s < 3; s++) {
+      const input = document.createElement('input');
+      input.type = 'number';
+      input.min = '0';
+      input.value = exData.sets?.[s] || 0;
+      input.placeholder = `Serie ${s + 1}`;
+      input.addEventListener('input', () => {
+        if (!state.selectedDate) return;
+        const current = getSession(state.selectedDate) || { exercises: EXERCISES.map(() => ({ weight: 0, sets: [0, 0, 0], feel: '' })), note: '' };
+        current.exercises[index].sets = Array.from(setGrid.querySelectorAll('input')).map(inp => Number(inp.value || 0));
+        setSession(state.selectedDate, { ...current, date: state.selectedDate, status: current.status || 'pending' });
+      });
+      setGrid.appendChild(input);
+    }
+    
+    exerciseList.appendChild(clone);
+  });
+
+  // Update button states
+  document.querySelectorAll('[data-status]').forEach((button) => {
+    button.classList.remove('active');
+    if (button.dataset.status === session.status) {
+      button.classList.add('active');
+    }
+  });
+}
+
+function isSameDay(a, b) {
+  return a && b && toDateKey(a) === toDateKey(b);
+}
+
+function updateSelectedSession(status) {
+  if (!state.selectedDate) return;
+
+  const current = getSession(state.selectedDate) || {
+    date: state.selectedDate,
+    status: 'pending',
+    exercises: EXERCISES.map(() => ({ weight: 0, sets: [0, 0, 0], feel: '' })),
+    note: '',
+  };
+
+  if (status === 'clear') {
+    deleteSession(state.selectedDate);
+  } else {
+    current.status = status;
+    current.note = noteInput.value.trim();
+    setSession(state.selectedDate, current);
+  }
+
+  renderCalendar();
+  renderSession();
+}
+
+function exportData() {
+  const blob = new Blob([JSON.stringify({ startDate: state.startDate, sessions: state.sessions }, null, 2)], {
+    type: 'application/json',
+  });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `rutina-fuerza-${toDateKey(new Date())}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  
+  statusMessage.textContent = '✓ Archivo exportado';
+  statusMessage.className = 'status-message success';
+  setTimeout(() => { statusMessage.textContent = ''; statusMessage.className = 'status-message'; }, 3000);
+}
+
+function importData(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const parsed = JSON.parse(String(reader.result));
+      if (!parsed || typeof parsed !== 'object') throw new Error('JSON invalido');
+      state.startDate = parsed.startDate || DEFAULT_START;
+      state.sessions = parsed.sessions || {};
+      saveState();
+      renderCalendar();
+      state.selectedDate = null;
+      renderSession();
+      statusMessage.textContent = '✓ Datos importados correctamente';
+      statusMessage.className = 'status-message success';
+      setTimeout(() => { statusMessage.textContent = ''; statusMessage.className = 'status-message'; }, 3000);
+    } catch {
+      statusMessage.textContent = '✗ El archivo no es válido';
+      statusMessage.className = 'status-message error';
+      setTimeout(() => { statusMessage.textContent = ''; statusMessage.className = 'status-message'; }, 3000);
+    }
+  };
+  reader.readAsText(file);
+}
+
+function bindEvents() {
+  const todayBtn = document.getElementById('btnHoy');
+  if (todayBtn) {
+    todayBtn.addEventListener('click', () => {
+      const today = toDateKey(new Date());
+      if (isTrainingDay(today)) {
+        state.selectedDate = today;
+      } else {
+        // Encontrar el próximo día de entrenamiento
+        const dates = getProgramDates();
+        const nextTraining = dates.find(d => toDateKey(d) >= today);
+        if (nextTraining) {
+          state.selectedDate = toDateKey(nextTraining);
+        }
+      }
+      renderCalendar();
+      renderSession();
+    });
+  }
+
+  const exportBtn = document.getElementById('btnExport');
+  if (exportBtn) {
+    exportBtn.addEventListener('click', exportData);
+  }
+  
+  importInput.addEventListener('change', (e) => importData(e.target.files?.[0]));
+
+  document.querySelectorAll('[data-status]').forEach((button) => {
+    button.addEventListener('click', () => updateSelectedSession(button.dataset.status));
+  });
+
+  noteInput.addEventListener('input', () => {
+    if (!state.selectedDate) return;
+    const current = getSession(state.selectedDate) || { exercises: EXERCISES.map(() => ({ weight: 0, sets: [0, 0, 0], feel: '' })), note: '' };
+    current.note = noteInput.value;
+    setSession(state.selectedDate, { ...current, date: state.selectedDate, status: current.status || 'pending' });
+  });
+}
+
+// Inicializar
+loadState();
+bindEvents();
+renderCalendar();
+renderSession();
