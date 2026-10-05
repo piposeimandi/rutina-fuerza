@@ -1,243 +1,358 @@
-const STORAGE_KEY = 'rutinaFuerzaData';
+const STORAGE_KEY = 'rutina-fuerza:v1';
+const PROGRAM_WEEKS = 12;
+const TRAINING_DAYS = [1, 3, 5];
+const DEFAULT_START = '2026-01-05';
 
-const weekFocus = {
-  1: ['Sentadilla', 'Press banca', 'Peso muerto'],
-  2: ['Sentadilla', 'Press militar', 'Remo'],
-  3: ['Sentadilla', 'Press banca', 'Peso muerto'],
-  4: ['Sentadilla', 'Press incline', 'Dominadas'],
-  5: ['Sentadilla profunda', 'Press banca', 'Peso muerto'],
-  6: ['Sentadilla', 'Press militar', 'Remo'],
-  7: ['Sentadilla', 'Press banca', 'Peso muerto'],
-  8: ['Sentadilla', 'Press incline', 'Dominadas'],
-  9: ['Sentadilla', 'Press banca', 'Peso muerto'],
-  10: ['Sentadilla', 'Press militar', 'Remo'],
-  11: ['Sentadilla', 'Press banca', 'Peso muerto'],
-  12: ['Prueba de fuerza', 'Ajustes finales', 'Recuperación activa']
+const state = {
+  startDate: DEFAULT_START,
+  selectedDate: null,
+  sessions: {},
 };
 
-const defaultState = {
-  entries: []
-};
+const calendarBody = document.getElementById('calendarBody');
+const weekBadge = document.getElementById('weekBadge');
+const sessionInfo = document.getElementById('sessionMessage');
+const sessionForm = document.getElementById('sessionForm');
+const selectedDateLabel = document.getElementById('selectedDateLabel');
+const selectedWeekLabel = document.getElementById('selectedWeekLabel');
+const statusMessage = document.getElementById('statusMessage');
 
-const form = document.getElementById('entry-form');
-const weekInput = document.getElementById('week');
-const dayInput = document.getElementById('day');
-const exerciseInput = document.getElementById('exercise');
-const setsInput = document.getElementById('sets');
-const repsInput = document.getElementById('reps');
-const weightInput = document.getElementById('weight');
-const rpeInput = document.getElementById('rpe');
-const notesInput = document.getElementById('notes');
+const exerciseTemplate = document.getElementById('exerciseTemplate');
+const exerciseList = document.getElementById('exerciseList');
+const noteInput = document.getElementById('noteInput');
+const importInput = document.getElementById('importInput');
+const programInfo = document.getElementById('programInfo');
 
-const entriesBody = document.getElementById('entries-body');
-const weeksGrid = document.getElementById('weeks-grid');
-const statSessions = document.getElementById('stat-sessions');
-const statVolume = document.getElementById('stat-volume');
-const statCurrentWeek = document.getElementById('stat-current-week');
-const statLastDate = document.getElementById('stat-last-date');
+// Configuración de ejercicios
+const EXERCISES = [
+  { name: 'Sentadilla', reps: '3x5', notes: 'Peso principal' },
+  { name: 'Press de banca', reps: '3x5', notes: 'Peso principal' },
+  { name: 'Peso muerto', reps: '1x5', notes: 'Peso principal' },
+  { name: 'Press militar', reps: '3x5', notes: 'Accesorio' },
+  { name: 'Deadlift rows', reps: '3x5', notes: 'Accesorio' },
+];
 
-const importBtn = document.getElementById('import-data');
-const exportBtn = document.getElementById('export-data');
-const fileInput = document.getElementById('file-input');
-const resetBtn = document.getElementById('reset-data');
+function parseDateKey(value) {
+  if (typeof value !== 'string') return null;
+  const match = /^\d{4}-\d{2}-\d{2}$/.exec(value.trim());
+  if (!match) return null;
+  const date = new Date(`${value}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return null;
+  return date;
+}
 
-let state = loadState();
+function toDateKey(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function getProgramDates(startDate = state.startDate) {
+  const start = parseDateKey(startDate);
+  if (!start) return [];
+
+  const dates = [];
+  let current = new Date(start);
+  for (let i = 0; i < PROGRAM_WEEKS * 7; i++) {
+    dates.push(new Date(current));
+    current.setDate(current.getDate() + 1);
+  }
+
+  return dates.filter((date) => TRAINING_DAYS.includes(date.getDay()));
+}
+
+function isTrainingDay(date) {
+  const value = date instanceof Date ? date : parseDateKey(date);
+  if (!(value instanceof Date) || Number.isNaN(value.getTime())) return false;
+  return TRAINING_DAYS.includes(value.getDay());
+}
+
+function weekForDate(dateValue) {
+  const date = dateValue instanceof Date ? dateValue : parseDateKey(dateValue);
+  if (!date) return 1;
+  const start = parseDateKey(state.startDate);
+  if (!start) return 1;
+  const diffDays = Math.floor((date - start) / 86400000);
+  if (diffDays < 0) return 1;
+  return Math.min(PROGRAM_WEEKS, Math.floor(diffDays / 7) + 1);
+}
 
 function loadState() {
   try {
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
-    if (!saved || !Array.isArray(saved.entries)) {
-      return { ...defaultState };
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) {
+      state.sessions = {};
+      return;
     }
-    return saved;
-  } catch (error) {
-    return { ...defaultState };
+    const parsed = JSON.parse(raw);
+    state.startDate = parsed.startDate || DEFAULT_START;
+    state.sessions = parsed.sessions || {};
+  } catch {
+    state.sessions = {};
   }
 }
 
 function saveState() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({
+    startDate: state.startDate,
+    sessions: state.sessions,
+  }));
 }
 
-function sortEntries(entries) {
-  return [...entries].sort((a, b) => new Date(b.date) - new Date(a.date));
+function getSession(dateKey) {
+  return state.sessions[dateKey] || null;
 }
 
-function getCurrentWeek() {
-  const selected = Number(weekInput.value || 1);
-  return Math.min(12, Math.max(1, selected));
+function setSession(dateKey, session) {
+  state.sessions[dateKey] = session;
+  saveState();
 }
 
-function getVolume(entry) {
-  return Number(entry.sets || 0) * Number(entry.reps || 0) * Number(entry.weight || 0);
+function deleteSession(dateKey) {
+  delete state.sessions[dateKey];
+  saveState();
 }
 
-function renderWeeks() {
-  const cards = Array.from({ length: 12 }, (_, index) => {
-    const weekNumber = index + 1;
-    const focusList = weekFocus[weekNumber] || ['Foco general'];
+function renderCalendar() {
+  const dates = getProgramDates();
+  const rows = [];
+  
+  for (let week = 1; week <= PROGRAM_WEEKS; week++) {
+    const cells = [];
+    dates.filter((date) => weekForDate(date) === week).forEach((date) => {
+      const key = toDateKey(date);
+      const session = getSession(key);
+      const cell = document.createElement('button');
+      cell.type = 'button';
+      cell.className = 'cell';
 
-    return `
-      <div class="week-card">
-        <h3>Semana ${weekNumber}</h3>
-        <ul>
-          ${focusList.map(item => `<li>${item}</li>`).join('')}
-        </ul>
-      </div>
-    `;
+      if (session && session.status === 'done') cell.classList.add('done');
+      if (session && session.status === 'skipped') cell.classList.add('skipped');
+      if (isSameDay(date, new Date())) cell.classList.add('today');
+      if (state.selectedDate === key) cell.classList.add('selected');
+
+      cell.innerHTML = `
+        <strong>${date.getDate()}</strong>
+        <small>${session ? (session.status === 'done' ? 'Hecha' : 'Omitida') : 'Pendiente'}</small>
+      `;
+
+      cell.addEventListener('click', () => {
+        state.selectedDate = key;
+        renderCalendar();
+        renderSession();
+      });
+      cells.push(cell);
+    });
+
+    const row = document.createElement('tr');
+    const weekCell = document.createElement('td');
+    weekCell.innerHTML = `<strong>W${week}</strong>`;
+    row.appendChild(weekCell);
+    cells.forEach((cell) => {
+      const td = document.createElement('td');
+      td.appendChild(cell);
+      row.appendChild(td);
+    });
+    rows.push(row);
+  }
+
+  calendarBody.innerHTML = '';
+  rows.forEach((row) => calendarBody.appendChild(row));
+  weekBadge.textContent = `Semana ${currentWeek()}`;
+  programInfo.textContent = `Inicio: ${state.startDate}`;
+}
+
+function currentWeek() {
+  return weekForDate(new Date());
+}
+
+function renderSession() {
+  if (!state.selectedDate) {
+    sessionInfo.classList.remove('hidden');
+    sessionForm.classList.add('hidden');
+    sessionInfo.textContent = 'Seleccioná una fecha del calendario.';
+    return;
+  }
+
+  const session = getSession(state.selectedDate) || {
+    date: state.selectedDate,
+    status: 'pending',
+    exercises: EXERCISES.map(() => ({ weight: 0, sets: [0, 0, 0], feel: '' })),
+    note: '',
+  };
+
+  sessionInfo.classList.add('hidden');
+  sessionForm.classList.remove('hidden');
+  selectedDateLabel.textContent = state.selectedDate;
+  selectedWeekLabel.textContent = `Semana ${weekForDate(state.selectedDate)}`;
+  noteInput.value = session.note || '';
+
+  // Renderizar ejercicios
+  exerciseList.innerHTML = '';
+  EXERCISES.forEach((ex, index) => {
+    const exData = session.exercises?.[index] || { weight: 0, sets: [0, 0, 0], feel: '' };
+    const clone = exerciseTemplate.content.cloneNode(true);
+    
+    clone.querySelector('.exercise-name').textContent = ex.name;
+    clone.querySelector('.exercise-badge').textContent = ex.reps;
+    clone.querySelector('.exercise-meta').textContent = ex.notes;
+    
+    const weightInput = clone.querySelector('.weight-input');
+    weightInput.value = exData.weight || 0;
+    weightInput.addEventListener('input', () => {
+      if (!state.selectedDate) return;
+      const current = getSession(state.selectedDate) || { exercises: EXERCISES.map(() => ({ weight: 0, sets: [0, 0, 0], feel: '' })), note: '' };
+      current.exercises[index].weight = Number(weightInput.value || 0);
+      setSession(state.selectedDate, { ...current, date: state.selectedDate, status: current.status || 'pending' });
+    });
+    
+    const feelInput = clone.querySelector('.feel-input');
+    feelInput.value = exData.feel || '';
+    feelInput.addEventListener('input', () => {
+      if (!state.selectedDate) return;
+      const current = getSession(state.selectedDate) || { exercises: EXERCISES.map(() => ({ weight: 0, sets: [0, 0, 0], feel: '' })), note: '' };
+      current.exercises[index].feel = feelInput.value;
+      setSession(state.selectedDate, { ...current, date: state.selectedDate, status: current.status || 'pending' });
+    });
+    
+    const setGrid = clone.querySelector('.set-grid');
+    setGrid.innerHTML = '';
+    for (let s = 0; s < 3; s++) {
+      const input = document.createElement('input');
+      input.type = 'number';
+      input.min = '0';
+      input.value = exData.sets?.[s] || 0;
+      input.placeholder = `Serie ${s + 1}`;
+      input.addEventListener('input', () => {
+        if (!state.selectedDate) return;
+        const current = getSession(state.selectedDate) || { exercises: EXERCISES.map(() => ({ weight: 0, sets: [0, 0, 0], feel: '' })), note: '' };
+        current.exercises[index].sets = Array.from(setGrid.querySelectorAll('input')).map(inp => Number(inp.value || 0));
+        setSession(state.selectedDate, { ...current, date: state.selectedDate, status: current.status || 'pending' });
+      });
+      setGrid.appendChild(input);
+    }
+    
+    exerciseList.appendChild(clone);
   });
 
-  weeksGrid.innerHTML = cards.join('');
+  // Update button states
+  document.querySelectorAll('[data-status]').forEach((button) => {
+    button.classList.remove('active');
+    if (button.dataset.status === session.status) {
+      button.classList.add('active');
+    }
+  });
 }
 
-function renderStats() {
-  const entries = sortEntries(state.entries);
-  const totalVolume = entries.reduce((sum, entry) => sum + getVolume(entry), 0);
-  const lastEntry = entries[0];
-
-  statSessions.textContent = String(entries.length);
-  statVolume.textContent = `${Math.round(totalVolume)} kg`;
-  statCurrentWeek.textContent = String(getCurrentWeek());
-  statLastDate.textContent = lastEntry ? new Date(lastEntry.date).toLocaleDateString('es-AR') : '-';
+function isSameDay(a, b) {
+  return a && b && toDateKey(a) === toDateKey(b);
 }
 
-function renderEntries() {
-  const entries = sortEntries(state.entries);
+function updateSelectedSession(status) {
+  if (!state.selectedDate) return;
 
-  if (entries.length === 0) {
-    entriesBody.innerHTML = `
-      <tr>
-        <td colspan="10" class="empty-state">Todavía no hay registros. Agregá tu primer entrenamiento.</td>
-      </tr>
-    `;
-    return;
-  }
-
-  entriesBody.innerHTML = entries
-    .map(
-      entry => `
-        <tr>
-          <td>${new Date(entry.date).toLocaleDateString('es-AR')}</td>
-          <td>${entry.week}</td>
-          <td>${entry.day}</td>
-          <td>${entry.exercise}</td>
-          <td>${entry.sets}</td>
-          <td>${entry.reps}</td>
-          <td>${entry.weight} kg</td>
-          <td>${entry.rpe}</td>
-          <td>${entry.notes || '-'}</td>
-          <td class="cell-action">
-            <button class="delete-btn" data-id="${entry.id}" type="button">Eliminar</button>
-          </td>
-        </tr>
-      `
-    )
-    .join('');
-}
-
-function render() {
-  renderWeeks();
-  renderStats();
-  renderEntries();
-}
-
-function createEntry(data) {
-  return {
-    id: crypto.randomUUID(),
-    ...data,
-    date: new Date().toISOString()
-  };
-}
-
-form.addEventListener('submit', event => {
-  event.preventDefault();
-
-  const payload = {
-    week: Number(weekInput.value),
-    day: dayInput.value,
-    exercise: exerciseInput.value.trim(),
-    sets: Number(setsInput.value),
-    reps: Number(repsInput.value),
-    weight: Number(weightInput.value),
-    rpe: Number(rpeInput.value),
-    notes: notesInput.value.trim()
+  const current = getSession(state.selectedDate) || {
+    date: state.selectedDate,
+    status: 'pending',
+    exercises: EXERCISES.map(() => ({ weight: 0, sets: [0, 0, 0], feel: '' })),
+    note: '',
   };
 
-  if (!payload.exercise || !payload.day) {
-    return;
+  if (status === 'clear') {
+    deleteSession(state.selectedDate);
+  } else {
+    current.status = status;
+    current.note = noteInput.value.trim();
+    setSession(state.selectedDate, current);
   }
 
-  const entry = createEntry(payload);
-  state.entries.push(entry);
-  saveState();
-  form.reset();
-  weekInput.value = String(getCurrentWeek());
-  setsInput.value = '4';
-  repsInput.value = '8';
-  weightInput.value = '0';
-  rpeInput.value = '8';
-  render();
-});
+  renderCalendar();
+  renderSession();
+}
 
-entriesBody.addEventListener('click', event => {
-  const button = event.target.closest('.delete-btn');
-  if (!button) return;
-
-  const { id } = button.dataset;
-  state.entries = state.entries.filter(entry => entry.id !== id);
-  saveState();
-  render();
-});
-
-exportBtn.addEventListener('click', () => {
-  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+function exportData() {
+  const blob = new Blob([JSON.stringify({ startDate: state.startDate, sessions: state.sessions }, null, 2)], {
+    type: 'application/json',
+  });
   const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = 'rutina-fuerza-backup.json';
-  link.click();
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `rutina-fuerza-${toDateKey(new Date())}.json`;
+  a.click();
   URL.revokeObjectURL(url);
-});
+  
+  statusMessage.textContent = '✓ Archivo exportado';
+  statusMessage.className = 'status-message success';
+  setTimeout(() => { statusMessage.textContent = ''; statusMessage.className = 'status-message'; }, 3000);
+}
 
-importBtn.addEventListener('click', () => fileInput.click());
-
-fileInput.addEventListener('change', event => {
-  const [file] = event.target.files || [];
+function importData(file) {
   if (!file) return;
-
   const reader = new FileReader();
   reader.onload = () => {
     try {
-      const imported = JSON.parse(String(reader.result));
-      if (!imported || !Array.isArray(imported.entries)) {
-        alert('El archivo JSON no tiene el formato esperado.');
-        return;
-      }
-
-      state = imported;
+      const parsed = JSON.parse(String(reader.result));
+      if (!parsed || typeof parsed !== 'object') throw new Error('JSON invalido');
+      state.startDate = parsed.startDate || DEFAULT_START;
+      state.sessions = parsed.sessions || {};
       saveState();
-      render();
-    } catch (error) {
-      alert('No se pudo importar el archivo JSON.');
-    } finally {
-      fileInput.value = '';
+      renderCalendar();
+      state.selectedDate = null;
+      renderSession();
+      statusMessage.textContent = '✓ Datos importados correctamente';
+      statusMessage.className = 'status-message success';
+      setTimeout(() => { statusMessage.textContent = ''; statusMessage.className = 'status-message'; }, 3000);
+    } catch {
+      statusMessage.textContent = '✗ El archivo no es válido';
+      statusMessage.className = 'status-message error';
+      setTimeout(() => { statusMessage.textContent = ''; statusMessage.className = 'status-message'; }, 3000);
     }
   };
-
   reader.readAsText(file);
-});
+}
 
-resetBtn.addEventListener('click', () => {
-  const shouldReset = window.confirm('¿Seguro que querés borrar todos los registros?');
-  if (!shouldReset) return;
+function bindEvents() {
+  const todayBtn = document.getElementById('btnHoy');
+  if (todayBtn) {
+    todayBtn.addEventListener('click', () => {
+      const today = toDateKey(new Date());
+      if (isTrainingDay(today)) {
+        state.selectedDate = today;
+      } else {
+        // Encontrar el próximo día de entrenamiento
+        const dates = getProgramDates();
+        const nextTraining = dates.find(d => toDateKey(d) >= today);
+        if (nextTraining) {
+          state.selectedDate = toDateKey(nextTraining);
+        }
+      }
+      renderCalendar();
+      renderSession();
+    });
+  }
 
-  state = { entries: [] };
-  saveState();
-  render();
-});
+  const exportBtn = document.getElementById('btnExport');
+  if (exportBtn) {
+    exportBtn.addEventListener('click', exportData);
+  }
+  
+  importInput.addEventListener('change', (e) => importData(e.target.files?.[0]));
 
-weekInput.addEventListener('change', () => {
-  statCurrentWeek.textContent = String(getCurrentWeek());
-});
+  document.querySelectorAll('[data-status]').forEach((button) => {
+    button.addEventListener('click', () => updateSelectedSession(button.dataset.status));
+  });
 
-render();
+  noteInput.addEventListener('input', () => {
+    if (!state.selectedDate) return;
+    const current = getSession(state.selectedDate) || { exercises: EXERCISES.map(() => ({ weight: 0, sets: [0, 0, 0], feel: '' })), note: '' };
+    current.note = noteInput.value;
+    setSession(state.selectedDate, { ...current, date: state.selectedDate, status: current.status || 'pending' });
+  });
+}
+
+// Inicializar
+loadState();
+bindEvents();
+renderCalendar();
+renderSession();
