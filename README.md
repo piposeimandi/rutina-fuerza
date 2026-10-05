@@ -1,18 +1,16 @@
 # Rutina Fuerza
 
-Registro de rutina de fuerza de 12 semanas, pensado para seguir tu plan sin backend, sin dependencias y con almacenamiento local en el navegador.
+Registro de rutina de fuerza de 12 semanas, pensado para seguir el plan sin backend ni dependencias.
 
-## Características
-
+## Qué incluye
 - Plan de 12 semanas
 - Días de entrenamiento: lunes, miércoles y viernes
-- Seguimiento de series, repeticiones y peso
+- Seguimiento de series, repeticiones, peso y sensación
 - Comparación semanal de progreso
 - Exportación e importación de datos en JSON
 - 100% estático: HTML, CSS y JavaScript
-- Sin servidor de aplicación ni base de datos
 
-## Cómo probarlo
+## Cómo probarlo localmente
 
 ```bash
 python -m http.server 8000
@@ -22,16 +20,6 @@ Luego abrí:
 
 ```text
 http://localhost:8000/
-```
-
-## Estructura
-
-```text
-.
-├── index.html
-├── styles.css
-├── app.js
-├── README.md
 ```
 
 ## Importante
