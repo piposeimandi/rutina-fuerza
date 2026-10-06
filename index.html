@@ -10,7 +10,7 @@
   <body>
     <header class="app-header">
       <div>
-        <p class="eyebrow">12 semanas</p>
+        <p class="eyebrow">12 semanas · Ganar masa muscular · 25-35 min</p>
         <h1>Rutina Fuerza</h1>
       </div>
       <div class="week-badge" id="weekBadge">Semana 1</div>
@@ -61,6 +61,8 @@
             <span id="selectedWeekLabel" class="chip">—</span>
           </div>
 
+          <p id="legacyNotice" class="legacy-notice hidden" role="status"></p>
+
           <div class="status-row">
             <button type="button" class="btn btn-done" data-status="done">Marcar como hecha</button>
             <button type="button" class="btn btn-skipped" data-status="skipped">Omitir</button>
@@ -77,6 +79,46 @@
       </section>
     </main>
 
+    <section class="panel exercises-panel" aria-labelledby="titulo-ejercicios">
+      <h2 id="titulo-ejercicios">Ejercicios</h2>
+
+      <p class="hint">
+        Objetivo: Ganar masa muscular y fortalecer brazos, hombros, pecho y piernas. Nivel inicial.
+      </p>
+      <p class="hint">
+        Frecuencia: lunes, miércoles y viernes. Duración: 25-35 minutos. Durante las primeras 2-3 semanas,
+        priorice aprender bien los movimientos antes que levantar más peso.
+      </p>
+
+      <div class="reference-grid" id="exerciseReference"></div>
+
+      <h3 class="notes-title">Cómo progresar</h3>
+      <dl class="notes-list">
+        <dt>Semanas 1-2</dt>
+        <dd>Use los pesos de 2 kg y aprenda la técnica. No hace falta llegar al límite.</dd>
+        <dt>Semanas 3-6</dt>
+        <dd>
+          Intente acercarse progresivamente al máximo indicado de repeticiones. Cuando pueda completar todas
+          las series en el extremo superior con buena técnica y sin que resulte demasiado difícil, aumente un
+          poco el peso.
+        </dd>
+        <dt>Semanas 7-12</dt>
+        <dd>Siga aumentando gradualmente el peso o las repeticiones.</dd>
+      </dl>
+
+      <h3 class="notes-title">Descansos</h3>
+      <p class="hint">Entre series: 60-90 segundos. Si todavía está muy agitado, espere un poco más.</p>
+
+      <h3 class="notes-title">Antes de empezar</h3>
+      <p class="hint">Haga 5 minutos de movimiento suave antes de empezar.</p>
+
+      <h3 class="notes-title notes-danger">Importante</h3>
+      <p class="hint">
+        Debe sentir esfuerzo muscular, pero no dolor agudo. Si aparece dolor fuerte o inusual, detenga el
+        ejercicio.
+      </p>
+    </section>
+
     <section class="panel backup-panel" aria-labelledby="titulo-backup">
       <h2 id="titulo-backup">Copia de seguridad</h2>
       <div class="toolbar backup-toolbar">
@@ -87,6 +129,27 @@
       <p id="statusMessage" class="status-message" aria-live="polite"></p>
     </section>
 
+    <dialog id="startDateDialog" class="dialog" aria-labelledby="startDateDialogTitle">
+      <form id="startDateForm" novalidate>
+        <h2 class="dialog-title" id="startDateDialogTitle">Fecha de inicio</h2>
+        <p class="dialog-text">
+          Elegí el día con el que arranca el bloque de 12 semanas.
+        </p>
+
+        <div class="dialog-field">
+          <label for="startDateInput">Fecha de inicio</label>
+          <input type="date" id="startDateInput" class="dialog-input" />
+        </div>
+
+        <p class="dialog-warning" id="startDateWarning" role="status"></p>
+
+        <div class="dialog-actions">
+          <button type="button" class="btn" id="btnCancelarInicio">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="btnGuardarInicio">Guardar</button>
+        </div>
+      </form>
+    </dialog>
+
     <template id="exerciseTemplate">
       <article class="exercise-card">
         <header class="exercise-head">
@@ -96,23 +159,68 @@
 
         <p class="exercise-meta"></p>
 
+        <details class="how">
+          <summary class="how-summary">Cómo se hace</summary>
+          <div class="how-body">
+            <p class="how-technique"></p>
+            <dl class="how-facts">
+              <div class="how-fact"><dt class="how-fact-label">Trabaja</dt><dd class="how-works"></dd></div>
+              <div class="how-fact"><dt class="how-fact-label">Series</dt><dd class="how-prescription"></dd></div>
+              <div class="how-fact"><dt class="how-fact-label">Descanso</dt><dd class="how-rest"></dd></div>
+            </dl>
+          </div>
+        </details>
+
         <div class="field">
-          <label>Peso (kg)</label>
+          <label class="type-field-label">Tipo de carga</label>
+          <select class="type-select">
+            <option value="weighted">Con peso</option>
+            <option value="bodyweight">Peso corporal</option>
+            <option value="weighted-extra">Peso extra (suma al corporal)</option>
+          </select>
+        </div>
+
+        <div class="field weight-field">
+          <label class="weight-label">Peso (kg)</label>
           <div class="weight-wrap">
             <input type="number" class="weight-input" min="0" step="0.5" inputmode="decimal" />
             <span class="unit">kg</span>
           </div>
+          <p class="weight-hint">Se suma a tu peso corporal. No es la carga total del ejercicio.</p>
         </div>
 
         <div class="field">
-          <label>Series</label>
+          <span class="field-label">Series</span>
           <div class="set-grid"></div>
+          <div class="set-actions">
+            <button type="button" class="btn set-btn set-add">+ Serie</button>
+            <button type="button" class="btn set-btn set-remove">− Serie</button>
+          </div>
         </div>
 
         <div class="field">
-          <label>Se sintió</label>
+          <label class="feel-field-label">Se sintió</label>
           <input type="text" class="feel-input" maxlength="60" placeholder="Fácil, moderada, difícil..." />
         </div>
+      </article>
+    </template>
+
+    <template id="exerciseReferenceTemplate">
+      <article class="exercise-card reference-card">
+        <header class="exercise-head">
+          <h3 class="exercise-name"></h3>
+          <span class="exercise-badge"></span>
+        </header>
+
+        <p class="exercise-meta"></p>
+
+        <p class="how-technique"></p>
+
+        <dl class="how-facts">
+          <div class="how-fact"><dt class="how-fact-label">Trabaja</dt><dd class="how-works"></dd></div>
+          <div class="how-fact"><dt class="how-fact-label">Series</dt><dd class="how-prescription"></dd></div>
+          <div class="how-fact"><dt class="how-fact-label">Descanso</dt><dd class="how-rest"></dd></div>
+        </dl>
       </article>
     </template>
 
