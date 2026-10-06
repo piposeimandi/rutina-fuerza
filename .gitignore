@@ -1,0 +1,21 @@
+# Auto-generated tooling cache (regenerate with `gentle-ai skill-registry refresh --force`)
+.atl/
+
+# Browser automation artifacts
+.playwright-mcp/
+
+# OS noise
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor / OS
+.idea/
+.vscode/
+*.swp
+
+# NOTE: `odd/` is intentionally tracked. It holds the feature task documents
+# that record why each change was made.

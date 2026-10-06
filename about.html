@@ -1,1 +1,406 @@
-<!DOCTYPE html>\n<html lang=\"es\">\n<head>\n  <meta charset=\"UTF-8\" />\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\n  <meta name=\"color-scheme\" content=\"light dark\" />\n  <title>Rutina Fuerza - Aventura</title>\n  <style>\n    * { margin: 0; padding: 0; box-sizing: border-box; }\n    \n    body {\n      background: #0a0e27;\n      color: #e0e0e0;\n      font-family: 'Courier New', monospace;\n      overflow-x: hidden;\n      min-height: 100vh;\n      position: relative;\n    }\n\n    /* Fondo animado de estrellas */\n    body::before {\n      content: '';\n      position: fixed;\n      top: 0;\n      left: 0;\n      width: 100%;\n      height: 100%;\n      background: radial-gradient(circle, #1a4d7d 1px, transparent 1px);\n      background-size: 50px 50px;\n      opacity: 0.1;\n      pointer-events: none;\n      z-index: 0;\n    }\n\n    .container {\n      position: relative;\n      z-index: 1;\n      max-width: 900px;\n      margin: 0 auto;\n      padding: 2rem;\n    }\n\n    header {\n      text-align: center;\n      margin-bottom: 3rem;\n      animation: glowIn 1s ease-out;\n    }\n\n    h1 {\n      font-size: 3rem;\n      text-shadow: 0 0 20px #38bdf8, 0 0 10px #0ea5e9;\n      margin-bottom: 0.5rem;\n      letter-spacing: 3px;\n    }\n\n    .pixel-art {\n      font-size: 2rem;\n      margin: 1rem 0;\n      animation: pulse 2s infinite;\n    }\n\n    .game-screen {\n      background: linear-gradient(135deg, #1a2a3a 0%, #0f1720 100%);\n      border: 4px solid #38bdf8;\n      border-radius: 10px;\n      padding: 2rem;\n      margin: 2rem 0;\n      box-shadow: 0 0 30px rgba(56, 189, 248, 0.3), inset 0 0 20px rgba(0, 0, 0, 0.5);\n      position: relative;\n    }\n\n    .game-screen::before {\n      content: 'LEVEL TUTORIAL';\n      position: absolute;\n      top: -15px;\n      left: 20px;\n      background: #0a0e27;\n      padding: 0 10px;\n      color: #38bdf8;\n      font-weight: bold;\n      font-size: 0.8rem;\n      letter-spacing: 2px;\n    }\n\n    .level {\n      margin: 2rem 0;\n      padding: 1.5rem;\n      background: rgba(15, 23, 42, 0.7);\n      border-left: 4px solid #22c55e;\n      border-radius: 5px;\n    }\n\n    .level h2 {\n      color: #22c55e;\n      font-size: 1.3rem;\n      margin-bottom: 0.5rem;\n      text-transform: uppercase;\n      letter-spacing: 2px;\n    }\n\n    .level p {\n      line-height: 1.6;\n      color: #b0b0b0;\n      margin: 0.5rem 0;\n    }\n\n    .level ul {\n      margin: 1rem 0 1rem 2rem;\n      list-style: none;\n    }\n\n    .level li {\n      margin: 0.5rem 0;\n      padding-left: 1.5rem;\n      position: relative;\n    }\n\n    .level li::before {\n      content: '▶';\n      position: absolute;\n      left: 0;\n      color: #38bdf8;\n    }\n\n    .power-up {\n      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);\n      border-radius: 10px;\n      padding: 1.5rem;\n      margin: 1.5rem 0;\n      border: 2px dashed #fbbf24;\n      text-align: center;\n      animation: float 3s ease-in-out infinite;\n    }\n\n    .power-up h3 {\n      color: #0a0e27;\n      font-size: 1.2rem;\n      margin-bottom: 0.5rem;\n      text-transform: uppercase;\n    }\n\n    .power-up p {\n      color: #0a0e27;\n      font-weight: bold;\n    }\n\n    .achievement {\n      display: inline-block;\n      background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);\n      padding: 1rem 1.5rem;\n      border-radius: 5px;\n      margin: 0.5rem;\n      font-weight: bold;\n      box-shadow: 0 4px 15px rgba(6, 182, 212, 0.4);\n    }\n\n    .buttons {\n      display: flex;\n      gap: 1rem;\n      margin-top: 2rem;\n      flex-wrap: wrap;\n      justify-content: center;\n    }\n\n    .btn {\n      padding: 1rem 2rem;\n      border: 2px solid #38bdf8;\n      background: rgba(56, 189, 248, 0.1);\n      color: #38bdf8;\n      font-family: 'Courier New', monospace;\n      font-weight: bold;\n      cursor: pointer;\n      border-radius: 5px;\n      text-decoration: none;\n      display: inline-block;\n      transition: all 0.3s ease;\n      text-transform: uppercase;\n      letter-spacing: 1px;\n      font-size: 0.9rem;\n    }\n\n    .btn:hover {\n      background: rgba(56, 189, 248, 0.3);\n      box-shadow: 0 0 20px rgba(56, 189, 248, 0.5);\n      transform: translateY(-2px);\n    }\n\n    .btn-primary {\n      background: #38bdf8;\n      color: #0a0e27;\n      border-color: #38bdf8;\n    }\n\n    .btn-primary:hover {\n      background: #0ea5e9;\n      box-shadow: 0 0 30px rgba(56, 189, 248, 0.8);\n    }\n\n    .game-stats {\n      display: grid;\n      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));\n      gap: 1rem;\n      margin: 2rem 0;\n    }\n\n    .stat {\n      background: rgba(34, 197, 94, 0.1);\n      border: 2px solid #22c55e;\n      padding: 1rem;\n      border-radius: 5px;\n      text-align: center;\n    }\n\n    .stat-value {\n      font-size: 1.8rem;\n      color: #22c55e;\n      font-weight: bold;\n    }\n\n    .stat-label {\n      color: #888;\n      font-size: 0.8rem;\n      text-transform: uppercase;\n      margin-top: 0.5rem;\n    }\n\n    .neon-text {\n      color: #0ea5e9;\n      text-shadow: 0 0 10px #0ea5e9, 0 0 20px #0ea5e9;\n      font-weight: bold;\n    }\n\n    @keyframes glowIn {\n      from {\n        opacity: 0;\n        text-shadow: 0 0 0 #38bdf8;\n      }\n      to {\n        opacity: 1;\n        text-shadow: 0 0 20px #38bdf8, 0 0 10px #0ea5e9;\n      }\n    }\n\n    @keyframes pulse {\n      0%, 100% { opacity: 1; }\n      50% { opacity: 0.7; }\n    }\n\n    @keyframes float {\n      0%, 100% { transform: translateY(0px); }\n      50% { transform: translateY(-10px); }\n    }\n\n    .warning {\n      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);\n      border: 2px solid #fca5a5;\n      color: #fee2e2;\n      padding: 1.5rem;\n      border-radius: 5px;\n      margin: 1.5rem 0;\n    }\n\n    .warning strong {\n      color: #fca5a5;\n    }\n\n    footer {\n      text-align: center;\n      margin-top: 3rem;\n      padding-top: 2rem;\n      border-top: 2px solid #38bdf8;\n      color: #666;\n      font-size: 0.9rem;\n    }\n\n    @media (max-width: 768px) {\n      h1 { font-size: 2rem; }\n      .game-screen { padding: 1.5rem; }\n      .buttons { flex-direction: column; }\n      .btn { width: 100%; }\n    }\n  </style>\n</head>\n<body>\n  <div class=\"container\">\n    <header>\n      <h1>⚔️ RUTINA FUERZA ⚔️</h1>\n      <p style=\"font-size: 1.2rem; color: #888; margin-top: 0.5rem; letter-spacing: 1px;\">~ A STRENGTH QUEST ~</p>\n    </header>\n\n    <div class=\"game-screen\">\n      <div class=\"level\">\n        <h2>🎮 Nivel 1: Bienvenido al Reino del Entrenamiento</h2>\n        <p>Hola, entrenador. Has llegado a un lugar legendario donde solo los más fuertes pueden prosperar. Tu misión: completar una búsqueda de 12 semanas para dominar las 5 técnicas ancestrales de la fuerza.</p>\n      </div>\n\n      <div class=\"game-stats\">\n        <div class=\"stat\">\n          <div class=\"stat-value\">12</div>\n          <div class=\"stat-label\">SEMANAS</div>\n        </div>\n        <div class=\"stat\">\n          <div class=\"stat-value\">3</div>\n          <div class=\"stat-label\">SESIONES/SEMANA</div>\n        </div>\n        <div class=\"stat\">\n          <div class=\"stat-value\">5</div>\n          <div class=\"stat-label\">HABILIDADES</div>\n        </div>\n        <div class=\"stat\">\n          <div class=\"stat-value\">∞</div>\n          <div class=\"stat-label\">XP A GANAR</div>\n        </div>\n      </div>\n\n      <div class=\"level\">\n        <h2>📋 Capítulo I: Estructura de la Misión</h2>\n        <p>Tu aventura se divide en <span class=\"neon-text\">12 semanas épicas</span>. Cada semana tiene <span class=\"neon-text\">3 días de batalla</span>: <strong>Lunes</strong>, <strong>Miércoles</strong> y <strong>Viernes</strong>.</p>\n        <p style=\"margin-top: 1rem;\">Las 5 técnicas que dominarás:</p>\n        <ul>\n          <li>🔵 <strong>Sentadilla</strong> - El golpe fundamental (3x5 reps)</li>\n          <li>🔵 <strong>Press de Banca</strong> - El ataque horizontal (3x5 reps)</li>\n          <li>🔵 <strong>Peso Muerto</strong> - El movimiento definitivo (1x5 reps)</li>\n          <li>🟢 <strong>Press Militar</strong> - La técnica de precisión (3x5 reps)</li>\n          <li>🟢 <strong>Deadlift Rows</strong> - La defensa suprema (3x5 reps)</li>\n        </ul>\n      </div>\n\n      <div class=\"level\">\n        <h2>📊 Capítulo II: El Sistema de Tracking</h2>\n        <p>En cada sesión registrarás:</p>\n        <ul>\n          <li>⚡ <strong>Peso utilizado</strong> - Tu poder actual</li>\n          <li>⚡ <strong>Series completadas</strong> - Tu resistencia</li>\n          <li>⚡ <strong>Sensación</strong> - Tu estado mental</li>\n          <li>⚡ <strong>Notas personales</strong> - Tu sabiduría acumulada</li>\n        </ul>\n        <p style=\"margin-top: 1rem;\">El sistema mantendrá un registro detallado de tu progreso, permitiéndote ver tu evolución semana a semana.</p>\n      </div>\n\n      <div class=\"power-up\">\n        <h3>💾 PODER ESPECIAL: BACKUP DE DATOS</h3>\n        <p>Tu progreso se guarda automáticamente en el almacén local del navegador.<br/>Usa la función de exportación JSON para crear copias de seguridad periódicamente y nunca pierder tus logros.</p>\n      </div>\n\n      <div class=\"level\">\n        <h2>🚀 Capítulo III: Despliegue y Acceso</h2>\n        <p><strong>Opción 1: Juego Local</strong></p>\n        <p style=\"margin: 0.5rem 0; margin-left: 1rem; color: #888;\">Ejecuta en tu terminal:</p>\n        <div style=\"background: #0a0e27; border: 1px solid #38bdf8; padding: 1rem; margin: 0.5rem 0; border-radius: 5px; overflow-x: auto;\">\n          <code>python -m http.server 8000</code>\n        </div>\n        <p style=\"margin: 0.5rem 0; margin-left: 1rem; color: #888;\">Luego visita: <code>http://localhost:8000/</code></p>\n\n        <p style=\"margin-top: 1.5rem;\"><strong>Opción 2: En la Nube (GitHub Pages)</strong></p>\n        <ul style=\"margin-top: 0.5rem;\">\n          <li>Sube este repositorio a GitHub</li>\n          <li>Ve a Settings → Pages</li>\n          <li>Selecciona la rama <code>main</code></li>\n          <li>¡Listo! Tu app estará en: <code style=\"color: #38bdf8;\">https://piposeimandi.github.io/rutina-fuerza/</code></li>\n        </ul>\n      </div>\n\n      <div class=\"warning\">\n        <strong>⚠️ ADVERTENCIA IMPORTANTE ⚠️</strong>\n        <p style=\"margin-top: 0.5rem; margin-bottom: 0;\">Tu progreso se guarda en <strong>localStorage</strong> del navegador. Si limpias el cache, perderás los datos. <span class=\"neon-text\">Exporta regularmente tu archivo JSON</span> como sistema de respaldo.</p>\n      </div>\n\n      <div class=\"level\">\n        <h2>🏆 Logros Desbloqueables</h2>\n        <div style=\"display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 1rem;\">\n          <div class=\"achievement\">⭐ Primera Sesión</div>\n          <div class=\"achievement\">💪 Primera Semana</div>\n          <div class=\"achievement\">🔥 Mes Completado</div>\n          <div class=\"achievement\">👑 Mitad de la Misión</div>\n          <div class=\"achievement\">🎊 ¡MISIÓN CUMPLIDA!</div>\n        </div>\n      </div>\n\n      <div class=\"level\">\n        <h2>📚 Características Técnicas (Para Nerds)</h2>\n        <ul>\n          <li>✅ <strong>100% Frontend</strong> - Sin servidor, sin dependencias externas</li>\n          <li>✅ <strong>HTML, CSS y JavaScript Vanilla</strong> - Puro poder</li>\n          <li>✅ <strong>LocalStorage</strong> - Almacenamiento persistente</li>\n          <li>✅ <strong>JSON Import/Export</strong> - Portabilidad máxima</li>\n          <li>✅ <strong>Responsive Design</strong> - Funciona en desktop, tablet y móvil</li>\n          <li>✅ <strong>Dark Mode</strong> - Para entrenar sin dañar la vista</li>\n        </ul>\n      </div>\n    </div>\n\n    <div class=\"buttons\">\n      <a href=\"index.html\" class=\"btn btn-primary\">▶ COMENZAR LA AVENTURA</a>\n      <a href=\"https://github.com/piposeimandi/rutina-fuerza\" class=\"btn\" target=\"_blank\">📖 VER EN GITHUB</a>\n    </div>\n\n    <footer>\n      <p>Hecho con 💪 en 2026 por piposeimandi</p>\n      <p>\"La consistencia es el verdadero poder\"</p>\n    </footer>\n  </div>\n</body>\n</html>\n"
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark" />
+    <title>Rutina Fuerza - Aventura</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+
+      body {
+        background: #0a0e27;
+        color: #e0e0e0;
+        font-family: 'Courier New', monospace;
+        overflow-x: hidden;
+        min-height: 100vh;
+        position: relative;
+      }
+
+      /* Fondo animado de estrellas */
+      body::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: radial-gradient(circle, #1a4d7d 1px, transparent 1px);
+        background-size: 50px 50px;
+        opacity: 0.1;
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      .container {
+        position: relative;
+        z-index: 1;
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 2rem;
+      }
+
+      header {
+        text-align: center;
+        margin-bottom: 3rem;
+        animation: glowIn 1s ease-out;
+      }
+
+      h1 {
+        font-size: 3rem;
+        text-shadow: 0 0 20px #38bdf8, 0 0 10px #0ea5e9;
+        margin-bottom: 0.5rem;
+        letter-spacing: 3px;
+      }
+
+      .pixel-art {
+        font-size: 2rem;
+        margin: 1rem 0;
+        animation: pulse 2s infinite;
+      }
+
+      .game-screen {
+        background: linear-gradient(135deg, #1a2a3a 0%, #0f1720 100%);
+        border: 4px solid #38bdf8;
+        border-radius: 10px;
+        padding: 2rem;
+        margin: 2rem 0;
+        box-shadow: 0 0 30px rgba(56, 189, 248, 0.3), inset 0 0 20px rgba(0, 0, 0, 0.5);
+        position: relative;
+      }
+
+      .game-screen::before {
+        content: 'LEVEL TUTORIAL';
+        position: absolute;
+        top: -15px;
+        left: 20px;
+        background: #0a0e27;
+        padding: 0 10px;
+        color: #38bdf8;
+        font-weight: bold;
+        font-size: 0.8rem;
+        letter-spacing: 2px;
+      }
+
+      .level {
+        margin: 2rem 0;
+        padding: 1.5rem;
+        background: rgba(15, 23, 42, 0.7);
+        border-left: 4px solid #22c55e;
+        border-radius: 5px;
+      }
+
+      .level h2 {
+        color: #22c55e;
+        font-size: 1.3rem;
+        margin-bottom: 0.5rem;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+      }
+
+      .level p {
+        line-height: 1.6;
+        color: #b0b0b0;
+        margin: 0.5rem 0;
+      }
+
+      .level ul {
+        margin: 1rem 0 1rem 2rem;
+        list-style: none;
+      }
+
+      .level li {
+        margin: 0.5rem 0;
+        padding-left: 1.5rem;
+        position: relative;
+      }
+
+      .level li::before {
+        content: '▶';
+        position: absolute;
+        left: 0;
+        color: #38bdf8;
+      }
+
+      .power-up {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin: 1.5rem 0;
+        border: 2px dashed #fbbf24;
+        text-align: center;
+        animation: float 3s ease-in-out infinite;
+      }
+
+      .power-up h3 {
+        color: #0a0e27;
+        font-size: 1.2rem;
+        margin-bottom: 0.5rem;
+        text-transform: uppercase;
+      }
+
+      .power-up p {
+        color: #0a0e27;
+        font-weight: bold;
+      }
+
+      .achievement {
+        display: inline-block;
+        background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+        padding: 1rem 1.5rem;
+        border-radius: 5px;
+        margin: 0.5rem;
+        font-weight: bold;
+        box-shadow: 0 4px 15px rgba(6, 182, 212, 0.4);
+      }
+
+      .buttons {
+        display: flex;
+        gap: 1rem;
+        margin-top: 2rem;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+
+      .btn {
+        padding: 1rem 2rem;
+        border: 2px solid #38bdf8;
+        background: rgba(56, 189, 248, 0.1);
+        color: #38bdf8;
+        font-family: 'Courier New', monospace;
+        font-weight: bold;
+        cursor: pointer;
+        border-radius: 5px;
+        text-decoration: none;
+        display: inline-block;
+        transition: all 0.3s ease;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-size: 0.9rem;
+      }
+
+      .btn:hover {
+        background: rgba(56, 189, 248, 0.3);
+        box-shadow: 0 0 20px rgba(56, 189, 248, 0.5);
+        transform: translateY(-2px);
+      }
+
+      .btn-primary {
+        background: #38bdf8;
+        color: #0a0e27;
+        border-color: #38bdf8;
+      }
+
+      .btn-primary:hover {
+        background: #0ea5e9;
+        box-shadow: 0 0 30px rgba(56, 189, 248, 0.8);
+      }
+
+      .game-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1rem;
+        margin: 2rem 0;
+      }
+
+      .stat {
+        background: rgba(34, 197, 94, 0.1);
+        border: 2px solid #22c55e;
+        padding: 1rem;
+        border-radius: 5px;
+        text-align: center;
+      }
+
+      .stat-value {
+        font-size: 1.8rem;
+        color: #22c55e;
+        font-weight: bold;
+      }
+
+      .stat-label {
+        color: #888;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        margin-top: 0.5rem;
+      }
+
+      .neon-text {
+        color: #0ea5e9;
+        text-shadow: 0 0 10px #0ea5e9, 0 0 20px #0ea5e9;
+        font-weight: bold;
+      }
+
+      @keyframes glowIn {
+        from {
+          opacity: 0;
+          text-shadow: 0 0 0 #38bdf8;
+        }
+        to {
+          opacity: 1;
+          text-shadow: 0 0 20px #38bdf8, 0 0 10px #0ea5e9;
+        }
+      }
+
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+      }
+
+      @keyframes float {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-10px); }
+      }
+
+      .warning {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        border: 2px solid #fca5a5;
+        color: #fee2e2;
+        padding: 1.5rem;
+        border-radius: 5px;
+        margin: 1.5rem 0;
+      }
+
+      .warning strong {
+        color: #fca5a5;
+      }
+
+      footer {
+        text-align: center;
+        margin-top: 3rem;
+        padding-top: 2rem;
+        border-top: 2px solid #38bdf8;
+        color: #666;
+        font-size: 0.9rem;
+      }
+
+      code {
+        overflow-wrap: anywhere;
+        word-break: break-word;
+      }
+
+      @media (max-width: 768px) {
+        h1 { font-size: 2rem; }
+        .game-screen { padding: 1.5rem; }
+        .buttons { flex-direction: column; }
+        .btn { width: 100%; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>⚔️ RUTINA FUERZA ⚔️</h1>
+        <p style="font-size: 1.2rem; color: #888; margin-top: 0.5rem; letter-spacing: 1px;">~ A STRENGTH QUEST ~</p>
+      </header>
+
+      <div class="game-screen">
+        <div class="level">
+          <h2>🎮 Nivel 1: Bienvenido al Reino del Entrenamiento</h2>
+          <p>Hola, entrenador. Este es el lugar donde solo los más constantes prosperan. Tu misión: <span class="neon-text">12 semanas</span> para ganar masa muscular y fortalecer brazos, hombros, pecho y piernas. Nivel <strong>principiante</strong>, 25-35 min por sesión.</p>
+        </div>
+
+        <div class="game-stats">
+          <div class="stat">
+            <div class="stat-value">12</div>
+            <div class="stat-label">SEMANAS</div>
+          </div>
+          <div class="stat">
+            <div class="stat-value">3</div>
+            <div class="stat-label">SESIONES/SEMANA</div>
+          </div>
+          <div class="stat">
+            <div class="stat-value">6</div>
+            <div class="stat-label">HABILIDADES</div>
+          </div>
+          <div class="stat">
+            <div class="stat-value">∞</div>
+            <div class="stat-label">XP A GANAR</div>
+          </div>
+        </div>
+
+        <div class="level">
+          <h2>📋 Capítulo I: Estructura de la Misión</h2>
+          <p>Tu aventura se divide en <span class="neon-text">12 semanas</span>. Cada semana tiene <span class="neon-text">3 días de batalla</span>: <strong>Lunes</strong>, <strong>Miércoles</strong> y <strong>Viernes</strong>. Las 6 habilidades que desbloquearás:</p>
+          <ul>
+            <li>🔵 <strong>Flexiones</strong> - El empuje del pecho (3x6-10, peso corporal, máximo actual 12)</li>
+            <li>🟢 <strong>Curl de bíceps</strong> - La espada corta (3x10-15, 2 kg por mano)</li>
+            <li>🟢 <strong>Curl martillo</strong> - El golpe doble (2x10-15, 2 kg)</li>
+            <li>🟢 <strong>Extensión de tríceps</strong> - El golpe hacia el cielo (3x10-15, una mancuerna con ambas manos)</li>
+            <li>🔵 <strong>Press de hombros</strong> - La técnica de precisión (2x10-15, 2 kg por mano)</li>
+            <li>🔵 <strong>Sentarse y levantarse de una silla</strong> - La guardia de las piernas (2x10-15, peso corporal)</li>
+          </ul>
+          <p>Flexiones y la silla son <strong>peso corporal</strong> (sin carga en la app). Las otras cuatro arrancan en <strong>2 kg</strong>.</p>
+        </div>
+
+        <div class="level">
+          <h2>📊 Capítulo II: El Sistema de Tracking</h2>
+          <p>En cada sesión registrarás:</p>
+          <ul>
+            <li>⚡ <strong>Series y repeticiones</strong> - Tu resistencia (agregá o quitá series)</li>
+            <li>⚡ <strong>Peso utilizado</strong> - Tu poder actual</li>
+            <li>⚡ <strong>Sensación</strong> - Tu estado mental</li>
+            <li>⚡ <strong>Notas personales</strong> - Tu sabiduría acumulada</li>
+          </ul>
+          <p style="margin-top: 1rem;">Subí de a poco: <strong>semanas 1-2</strong> aprendé la técnica con 2 kg, <strong>semanas 3-6</strong> llegá al techo de reps y sumá peso, <strong>semanas 7-12</strong> seguí subiendo gradualmente. Calentá <strong>5 minutos</strong> con movimiento suave y descansá <strong>60-90 segundos</strong> entre series, hasta <strong>2 minutos</strong> después de las flexiones.</p>
+        </div>
+
+        <div class="power-up">
+          <h3>💾 PODER ESPECIAL: BACKUP DE DATOS</h3>
+          <p>Tu progreso se guarda automáticamente en el almacén local del navegador.<br />Usá la función de exportación JSON para crear copias de seguridad periódicamente y nunca perder tus logros.</p>
+        </div>
+
+        <div class="level">
+          <h2>🚀 Capítulo III: Despliegue y Acceso</h2>
+          <p><strong>Opción 1: Juego Local</strong></p>
+          <p style="margin: 0.5rem 0; margin-left: 1rem; color: #888;">Ejecutá en tu terminal y visitá <code>http://localhost:8000/</code>:</p>
+          <div style="background: #0a0e27; border: 1px solid #38bdf8; padding: 1rem; margin: 0.5rem 0; border-radius: 5px; overflow-x: auto;">
+            <code>python3 -m http.server 8000</code>
+          </div>
+          <p style="margin-top: 1.5rem;"><strong>Opción 2: En la Nube (GitHub Pages)</strong></p>
+          <ul style="margin-top: 0.5rem;">
+            <li>Subí este repositorio a GitHub, ve a Settings → Pages y elegí la rama <code>main</code></li>
+            <li>Tu app quedará en: <code style="color: #38bdf8;">https://piposeimandi.github.io/rutina-fuerza/</code></li>
+          </ul>
+        </div>
+
+        <div class="warning">
+          <strong>⚠️ ADVERTENCIA IMPORTANTE ⚠️</strong>
+          <p style="margin-top: 0.5rem; margin-bottom: 0;">Tu progreso se guarda en <strong>localStorage</strong> del navegador. Si limpiás la caché, perdés los datos. <strong>Exportá regularmente tu archivo JSON</strong> como sistema de respaldo.</p>
+          <p style="margin-top: 0.5rem; margin-bottom: 0;">Y una regla de oro: <strong>esforzate, no te|lastimes</strong>. Si sentís un dolor fuerte o raro, frená el ejercicio.</p>
+        </div>
+
+        <div class="level">
+          <h2>🏆 Logros Desbloqueables</h2>
+          <div style="display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 1rem;">
+            <div class="achievement">⭐ Primera Sesión</div>
+            <div class="achievement">💪 Primera Semana</div>
+            <div class="achievement">🔥 Mes Completado</div>
+            <div class="achievement">👑 Mitad de la Misión</div>
+            <div class="achievement">🎊 ¡MISIÓN CUMPLIDA!</div>
+          </div>
+        </div>
+
+        <div class="level">
+          <h2>📚 Características Técnicas (Para Nerds)</h2>
+          <ul>
+            <li>✅ <strong>100% Frontend</strong> - HTML, CSS y JavaScript vanilla, sin servidor ni dependencias</li>
+            <li>✅ <strong>LocalStorage</strong> - Almacenamiento persistente</li>
+            <li>✅ <strong>JSON Import/Export</strong> - Portabilidad máxima</li>
+            <li>✅ <strong>Mobile First</strong> - Pensada para el teléfono, sin scroll horizontal a 360px</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="buttons">
+        <a href="index.html" class="btn btn-primary">▶ COMENZAR LA AVENTURA</a>
+        <a href="https://github.com/piposeimandi/rutina-fuerza" class="btn" target="_blank">📖 VER EN GITHUB</a>
+      </div>
+
+      <footer>
+        <p>Hecho con 💪 en 2026 por piposeimandi</p>
+        <p>"La consistencia es el verdadero poder"</p>
+      </footer>
+    </div>
+  </body>
+</html>

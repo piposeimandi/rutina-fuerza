@@ -26,7 +26,9 @@
 
 * { box-sizing: border-box; }
 
-html { color-scheme: light dark; }
+/* The UI is dark-only by design. Declaring `dark` keeps UA-rendered control
+   chrome (select popups, date picker) from rendering light over the dark panels. */
+html { color-scheme: dark; }
 
 body {
   margin: 0;
