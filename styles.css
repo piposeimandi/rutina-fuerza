@@ -90,12 +90,16 @@ h2 {
 
 /* --- Layout --------------------------------------------------------------- */
 
-.layout {
+main {
   margin: 0 auto;
-  padding: 0 var(--gutter);
+  padding: 0 var(--gutter) 1.5rem;
+  max-width: 1200px;
+}
+
+.view {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
   gap: 0.75rem;
+  min-width: 0;
 }
 
 .panel {
@@ -107,12 +111,75 @@ h2 {
   min-width: 0;
 }
 
-.backup-panel,
-.exercises-panel {
-  margin: 0.75rem auto 1.5rem;
-  width: calc(100% - (var(--gutter) * 2));
+/* --- View nav ------------------------------------------------------------- */
+
+.app-nav {
+  margin: 0 auto 0.75rem;
+  padding: 0 var(--gutter);
   max-width: 1200px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
 }
+
+.nav-tab {
+  appearance: none;
+  border: 1px solid var(--border);
+  background: rgba(17, 24, 39, 0.85);
+  color: var(--muted);
+  border-radius: 10px;
+  padding: 0.7rem 1rem;
+  min-height: var(--tap);
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.nav-tab.active {
+  background: var(--accent);
+  color: #031827;
+  border-color: transparent;
+}
+
+.nav-tab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* --- Collapsible panels --------------------------------------------------- */
+
+.collapsible { padding: 0; }
+
+.collapsible-summary {
+  display: flex;
+  align-items: center;
+  min-height: var(--tap);
+  padding: 0.85rem;
+  cursor: pointer;
+  list-style: none;
+  border-radius: var(--radius);
+}
+
+.collapsible-summary::-webkit-details-marker { display: none; }
+
+.collapsible-summary h2 { margin: 0; }
+
+.collapsible-summary::after {
+  content: '›';
+  margin-left: auto;
+  font-size: 1.3rem;
+  line-height: 1;
+  transition: transform 0.15s ease;
+}
+
+.collapsible[open] > .collapsible-summary::after { transform: rotate(90deg); }
+
+.collapsible-summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.collapsible-body { padding: 0 0.85rem 0.85rem; }
 
 .toolbar {
   display: flex;
@@ -275,12 +342,8 @@ h2 {
 
 /* --- Session -------------------------------------------------------------- */
 
-.session-message {
-  min-height: 48px;
-  display: grid;
-  place-items: center;
-  color: var(--muted);
-  text-align: center;
+.session-nav {
+  margin-bottom: 1rem;
 }
 
 .session-form { display: block; }
@@ -334,10 +397,92 @@ h2 {
 .exercise-card {
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 0.85rem;
+  padding: 0;
   background: rgba(255,255,255,0.02);
   min-width: 0;
+  overflow: hidden;
 }
+
+.reference-card { padding: 0.85rem; }
+
+/* Session cards: collapsed summary row that expands into the full form. */
+.exercise-summary {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.85rem;
+  background: transparent;
+  border: none;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  transition: background 0.15s ease;
+}
+
+.exercise-summary:hover { background: rgba(255, 255, 255, 0.03); }
+
+.exercise-summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.exercise-check {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: transparent;
+}
+
+.exercise-card.is-done .exercise-check {
+  background: var(--done-strong);
+  border-color: var(--done-strong);
+  color: #031827;
+}
+
+.exercise-summary-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.exercise-summary .exercise-name { margin: 0; }
+
+.exercise-card.is-done .exercise-summary .exercise-name { color: var(--muted); }
+
+.exercise-summary-meta {
+  color: var(--muted);
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
+}
+
+.exercise-summary .exercise-badge {
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+.exercise-card.is-active { border-color: var(--accent); }
+
+.exercise-body {
+  padding: 0 0.85rem 0.85rem;
+  border-top: 1px solid var(--border);
+}
+
+.exercise-actions {
+  margin-top: 0.9rem;
+}
+
+.exercise-finish { width: 100%; }
 
 .exercise-head {
   display: flex;
@@ -620,6 +765,125 @@ textarea {
   line-height: 1.4;
 }
 
+/* --- Statistics ----------------------------------------------------------- */
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.stat {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.7rem 0.5rem;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.02);
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.stat-value {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--accent);
+}
+
+.stat-label {
+  color: var(--muted);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.stat-bar {
+  height: 12px;
+  border-radius: 999px;
+  background: var(--pending);
+  overflow: hidden;
+  margin-bottom: 0.75rem;
+}
+
+.stat-bar-fill {
+  height: 100%;
+  width: 0;
+  background: var(--accent);
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+.progression-list {
+  display: grid;
+  gap: 0.6rem;
+  margin-top: 1rem;
+}
+
+.progression-row {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.7rem;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.progression-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+}
+
+.progression-name {
+  font-size: 0.95rem;
+}
+
+.progression-head .exercise-badge { margin-left: auto; }
+
+.progression-none {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.progression-body {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.progression-trend {
+  flex: 0 0 auto;
+  width: 1.2rem;
+  text-align: center;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.progression-trend.up { color: var(--done-strong); }
+.progression-trend.down { color: var(--danger); }
+.progression-trend.flat { color: var(--muted); }
+
+.progression-spark {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--accent);
+}
+
+.spark {
+  display: block;
+  width: 100%;
+  height: 32px;
+}
+
+.progression-detail {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
 /* --- Start date dialog ---------------------------------------------------- */
 
 .dialog {
@@ -756,10 +1020,6 @@ textarea {
     grid-template-columns: repeat(auto-fit, minmax(5.5rem, 1fr));
   }
 
-  .session-message {
-    text-align: left;
-  }
-
   .session-head {
     margin-bottom: 1.5rem;
     padding-bottom: 1rem;
@@ -774,7 +1034,9 @@ textarea {
   .status-row .btn { width: auto; }
 
   .exercise-list { gap: 1.5rem; }
-  .exercise-card { padding: 1rem; }
+  .reference-card { padding: 1rem; }
+  .exercise-summary { padding: 1rem; }
+  .exercise-body { padding: 0 1rem 1rem; }
   .field { margin-top: 0.9rem; }
 
   .note-field {
@@ -786,8 +1048,7 @@ textarea {
 }
 
 @media (min-width: 861px) {
-  .app-header,
-  .layout {
+  .app-header {
     max-width: 1200px;
   }
 
@@ -799,21 +1060,9 @@ textarea {
     gap: 1rem;
   }
 
-  .layout {
-    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
-    gap: 1rem;
-    padding: 0 1rem 1rem;
-  }
-
   .panel {
     padding: 1.5rem;
     border-radius: 18px;
-  }
-
-  .backup-panel,
-  .exercises-panel {
-    margin: 0 auto 2rem;
-    width: calc(100% - 2rem);
   }
 
   .reference-grid {
@@ -824,7 +1073,11 @@ textarea {
     gap: 0.75rem;
   }
 
-  .exercise-card { padding: 1rem; }
+  .reference-card { padding: 1rem; }
+  .exercise-summary { padding: 1rem; }
+  .exercise-body { padding: 0 1rem 1rem; }
+  .collapsible-summary { padding: 1rem; }
+  .collapsible-body { padding: 0 1rem 1rem; }
 
   .weight-input { width: 6rem; }
 }

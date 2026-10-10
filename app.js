@@ -17,14 +17,23 @@ const EXERCISE_TYPE_LABELS = {
 const state = {
   startDate: DEFAULT_START,
   selectedDate: null,
+  view: 'calendar',
   sessions: {},
   exerciseTypes: {},
 };
 
+// Which exercise of the current session is expanded right now. Per-exercise
+// completion lives in the session data (`done`); this only remembers what the
+// user was working on and is never persisted.
+let activeExercise = { date: null, name: null };
+
+const viewCalendar = document.getElementById('viewCalendar');
+const viewSession = document.getElementById('viewSession');
+const viewStats = document.getElementById('viewStats');
+const appNav = document.getElementById('appNav');
+
 const calendarBody = document.getElementById('calendarBody');
 const weekBadge = document.getElementById('weekBadge');
-const sessionInfo = document.getElementById('sessionMessage');
-const sessionForm = document.getElementById('sessionForm');
 const selectedDateLabel = document.getElementById('selectedDateLabel');
 const selectedWeekLabel = document.getElementById('selectedWeekLabel');
 const statusMessage = document.getElementById('statusMessage');
@@ -38,6 +47,13 @@ const programInfo = document.getElementById('programInfo');
 
 const exerciseReference = document.getElementById('exerciseReference');
 const exerciseReferenceTemplate = document.getElementById('exerciseReferenceTemplate');
+
+const statCumplimiento = document.getElementById('statCumplimiento');
+const statHechas = document.getElementById('statHechas');
+const statRacha = document.getElementById('statRacha');
+const statBarFill = document.getElementById('statBarFill');
+const statDetail = document.getElementById('statDetail');
+const progressionList = document.getElementById('progressionList');
 
 const startDateDialog = document.getElementById('startDateDialog');
 const startDateForm = document.getElementById('startDateForm');
@@ -168,6 +184,10 @@ function weekForDate(dateValue) {
   return Math.min(PROGRAM_WEEKS, Math.floor(diffDays / 7) + 1);
 }
 
+function currentWeek() {
+  return weekForDate(new Date());
+}
+
 function isPlainObject(value) {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
@@ -201,6 +221,7 @@ function fallbackExerciseData(setsCount = MIN_SETS) {
     weight: 0,
     sets: Array.from({ length: clampSetCount(setsCount) }, () => 0),
     feel: '',
+    done: false,
   };
 }
 
@@ -216,6 +237,7 @@ function defaultExerciseData(exercise) {
     weight: toNumber(exercise && exercise.defaultWeight),
     sets: emptySets(exercise),
     feel: '',
+    done: false,
   };
 }
 
@@ -252,7 +274,7 @@ function storedExercisesToMap(stored) {
   return map;
 }
 
-function normalizeExerciseEntry(entry, fallback) {
+function normalizeExerciseEntry(entry, fallback, forceDone = false) {
   if (!isPlainObject(entry)) return fallback;
 
   let sets;
@@ -265,10 +287,16 @@ function normalizeExerciseEntry(entry, fallback) {
     sets = fallback.sets.slice();
   }
 
+  // `done` is new. Data written before it existed has no clue about it: infer
+  // quietly instead of forcing the user to re-tap six cards.
+  const hasReps = sets.some((value) => value > 0);
+  const done = typeof entry.done === 'boolean' ? entry.done : (forceDone || hasReps);
+
   return {
     weight: toNumber(entry.weight),
     sets,
     feel: typeof entry.feel === 'string' ? entry.feel : '',
+    done,
   };
 }
 
@@ -280,19 +308,19 @@ function normalizeSession(raw, dateKey) {
 
   const stored = storedExercisesToMap(raw.exercises);
   const exercises = {};
+  const status = ['pending', 'done', 'skipped'].includes(raw.status) ? raw.status : 'pending';
+  const forceDone = status === 'done';
 
   Object.keys(base.exercises).forEach((name) => {
-    exercises[name] = normalizeExerciseEntry(stored[name], base.exercises[name]);
+    exercises[name] = normalizeExerciseEntry(stored[name], base.exercises[name], forceDone);
   });
 
   // Entries the current program does not know about belong to a previous routine.
   // They stay in the payload (export/import carry them) instead of being discarded.
   Object.keys(stored).forEach((name) => {
     if (Object.prototype.hasOwnProperty.call(exercises, name)) return;
-    exercises[name] = normalizeExerciseEntry(stored[name], fallbackExerciseData());
+    exercises[name] = normalizeExerciseEntry(stored[name], fallbackExerciseData(), forceDone);
   });
-
-  const status = ['pending', 'done', 'skipped'].includes(raw.status) ? raw.status : 'pending';
 
   return {
     date: dateKey,
@@ -449,7 +477,6 @@ function deleteSession(dateKey) {
   saveState();
 }
 
-// Canonical session for the selected date, or null when nothing is selected.
 function ensureSelectedSession() {
   if (!state.selectedDate) return null;
   const session = normalizeSession(getSession(state.selectedDate), state.selectedDate);
@@ -465,6 +492,42 @@ function showStatus(message, kind) {
     statusMessage.textContent = '';
     statusMessage.className = 'status-message';
   }, 3000);
+}
+
+// --- Views ----------------------------------------------------------------
+
+// The session is derived from state.selectedDate; the tabs pick between the
+// calendar and the stats screens. Both come through here.
+function currentView() {
+  if (state.selectedDate) return 'session';
+  return state.view === 'stats' ? 'stats' : 'calendar';
+}
+
+function renderApp() {
+  const view = currentView();
+
+  viewCalendar.classList.toggle('hidden', view !== 'calendar');
+  viewSession.classList.toggle('hidden', view !== 'session');
+  viewStats.classList.toggle('hidden', view !== 'stats');
+  appNav.classList.toggle('hidden', view === 'session');
+
+  document.querySelectorAll('.nav-tab[data-view]').forEach((tab) => {
+    const isActive = tab.dataset.view === view;
+    tab.classList.toggle('active', isActive);
+    tab.setAttribute('aria-current', isActive ? 'page' : 'false');
+  });
+
+  if (view === 'calendar') renderCalendar();
+  else if (view === 'session') renderSession();
+  else if (view === 'stats') renderStats();
+}
+
+function showCalendarView() {
+  state.selectedDate = null;
+  state.view = 'calendar';
+  // Re-entering a date later must re-derive the first pending exercise.
+  activeExercise = { date: null, name: null };
+  renderApp();
 }
 
 function renderCalendar() {
@@ -498,8 +561,7 @@ function renderCalendar() {
 
       cell.addEventListener('click', () => {
         state.selectedDate = key;
-        renderCalendar();
-        renderSession();
+        renderApp();
       });
       cells.push(cell);
     });
@@ -523,8 +585,50 @@ function renderCalendar() {
     `Inicio: ${state.startDate} · Lunes, miércoles y viernes · 25-35 min`;
 }
 
-function currentWeek() {
-  return weekForDate(new Date());
+function isSameDay(a, b) {
+  return a && b && toDateKey(a) === toDateKey(b);
+}
+
+// --- Guided session -------------------------------------------------------
+
+function resolveActiveExercise(session) {
+  if (activeExercise.date !== state.selectedDate) {
+    const pending = EXERCISES.find((exercise) => !exerciseData(session, exercise).done);
+    activeExercise = { date: state.selectedDate, name: pending ? pending.name : null };
+  }
+  return activeExercise.name;
+}
+
+function toggleExerciseCard(name) {
+  const session = ensureSelectedSession();
+  const current = resolveActiveExercise(session);
+  activeExercise = { date: state.selectedDate, name: current === name ? null : name };
+  renderSession();
+}
+
+function finishExercise(name) {
+  const session = ensureSelectedSession();
+  if (!session) return;
+  const exercise = findExercise(name);
+  if (!exercise) return;
+
+  exerciseData(session, exercise).done = true;
+  setSession(state.selectedDate, session);
+
+  const next = EXERCISES.find((candidate) => !exerciseData(session, candidate).done);
+  activeExercise = { date: state.selectedDate, name: next ? next.name : null };
+  renderSession();
+}
+
+// Collapsed summary label, e.g. "2 kg · 12/12/10" or "12/12/10" for bodyweight.
+function exerciseSummaryLabel(exData, exercise) {
+  const parts = [];
+  if (getExerciseType(exercise.name) !== 'bodyweight') {
+    parts.push(`${exData.weight} kg`);
+  }
+  const logged = exData.sets.filter((value) => value > 0);
+  parts.push(logged.length > 0 ? logged.join('/') : 'Sin cargar');
+  return parts.join(' · ');
 }
 
 // --- Exercise cards --------------------------------------------------------
@@ -538,17 +642,25 @@ function updateSetButtons(addBtn, removeBtn, count) {
   removeBtn.disabled = count <= MIN_SETS;
 }
 
-function renderExerciseCard(exercise, index) {
-  const session = ensureSelectedSession();
+function renderExerciseCard(exercise, index, session, activeName) {
   const exData = exerciseData(session, exercise);
+  const isActive = exercise.name === activeName;
 
   const clone = exerciseTemplate.content.cloneNode(true);
   const card = clone.querySelector('.exercise-card');
   card.dataset.index = String(index);
+  card.classList.toggle('is-done', Boolean(exData.done));
+  card.classList.toggle('is-active', isActive);
 
+  const summary = clone.querySelector('.exercise-summary');
+  summary.setAttribute('aria-expanded', String(isActive));
   clone.querySelector('.exercise-name').textContent = exercise.name;
   clone.querySelector('.exercise-badge').textContent = `${exercise.sets} × ${exercise.repsRange}`;
-  clone.querySelector('.exercise-meta').textContent = `Trabaja: ${exercise.works}`;
+  clone.querySelector('.exercise-summary-meta').textContent = exerciseSummaryLabel(exData, exercise);
+  summary.addEventListener('click', () => toggleExerciseCard(exercise.name));
+
+  const body = clone.querySelector('.exercise-body');
+  body.classList.toggle('hidden', !isActive);
 
   // Cómo se hace
   clone.querySelector('.how-technique').textContent = exercise.technique;
@@ -624,6 +736,9 @@ function renderExerciseCard(exercise, index) {
   removeBtn.addEventListener('click', () => changeSetCount(exercise, index, -1));
   updateSetButtons(addBtn, removeBtn, exData.sets.length);
 
+  // Guided flow: completing an exercise collapses it and opens the next pending.
+  clone.querySelector('.exercise-finish').addEventListener('click', () => finishExercise(exercise.name));
+
   return card;
 }
 
@@ -633,7 +748,8 @@ function replaceExerciseCard(index) {
   const existing = exerciseList.querySelector(`.exercise-card[data-index="${index}"]`);
   const exercise = EXERCISES[index];
   if (!existing || !exercise) return;
-  existing.replaceWith(renderExerciseCard(exercise, index));
+  const session = ensureSelectedSession();
+  existing.replaceWith(renderExerciseCard(exercise, index, session, resolveActiveExercise(session)));
 }
 
 // `sets` stays a flat array of numbers on purpose: stored sessions need no
@@ -672,40 +788,27 @@ function renderLegacyNotice(session) {
 }
 
 function renderSession() {
-  if (!state.selectedDate) {
-    sessionInfo.classList.remove('hidden');
-    sessionForm.classList.add('hidden');
-    sessionInfo.textContent = 'Seleccioná una fecha del calendario.';
-    return;
-  }
+  if (!state.selectedDate) return;
 
   const session = ensureSelectedSession();
 
-  sessionInfo.classList.add('hidden');
-  sessionForm.classList.remove('hidden');
   selectedDateLabel.textContent = state.selectedDate;
   selectedWeekLabel.textContent = `Semana ${weekForDate(state.selectedDate)}`;
   noteInput.value = session.note;
 
   renderLegacyNotice(session);
 
-  // Renderizar ejercicios
+  const activeName = resolveActiveExercise(session);
+
   exerciseList.innerHTML = '';
   EXERCISES.forEach((exercise, index) => {
-    exerciseList.appendChild(renderExerciseCard(exercise, index));
+    exerciseList.appendChild(renderExerciseCard(exercise, index, session, activeName));
   });
 
   // Update button states
   document.querySelectorAll('[data-status]').forEach((button) => {
-    button.classList.remove('active');
-    if (button.dataset.status === session.status) {
-      button.classList.add('active');
-    }
+    button.classList.toggle('active', button.dataset.status === session.status);
   });
-}
-
-function isSameDay(a, b) {
-  return a && b && toDateKey(a) === toDateKey(b);
 }
 
 function updateSelectedSession(status) {
@@ -718,11 +821,17 @@ function updateSelectedSession(status) {
   } else {
     current.status = status;
     current.note = noteInput.value.trim();
+    if (status === 'done') {
+      // Marking the whole session done short-circuits the per-exercise flow.
+      EXERCISES.forEach((exercise) => {
+        exerciseData(current, exercise).done = true;
+      });
+    }
     setSession(state.selectedDate, current);
   }
 
-  renderCalendar();
-  renderSession();
+  activeExercise = { date: null, name: null };
+  renderApp();
 }
 
 // --- Exercise reference ----------------------------------------------------
@@ -744,6 +853,166 @@ function renderExerciseReference() {
     clone.querySelector('.how-rest').textContent = exercise.rest;
 
     exerciseReference.appendChild(clone);
+  });
+}
+
+// --- Statistics -------------------------------------------------------------
+
+function trainingDates() {
+  return getProgramDates().map((date) => toDateKey(date)).sort();
+}
+
+function currentStreak(elapsed, todayKey) {
+  let streak = 0;
+  for (let i = elapsed.length - 1; i >= 0; i--) {
+    const session = getSession(elapsed[i]);
+    if (session && session.status === 'done') {
+      streak++;
+    } else if (session && session.status === 'skipped') {
+      break;
+    } else if (elapsed[i] === todayKey) {
+      // Today's session is 'pending' simply because it has not arrived yet.
+      continue;
+    } else {
+      break;
+    }
+  }
+  return streak;
+}
+
+function renderStats() {
+  if (statCumplimiento && statHechas && statRacha && statBarFill && statDetail) {
+    const todayKey = toDateKey(new Date());
+    const elapsed = trainingDates().filter((key) => key <= todayKey);
+    const done = elapsed.filter((key) => getSession(key) && getSession(key).status === 'done');
+    const skipped = elapsed.filter((key) => getSession(key) && getSession(key).status === 'skipped');
+    const pending = elapsed.filter((key) => !getSession(key) || getSession(key).status === 'pending');
+    const pct = elapsed.length ? Math.round((done.length / elapsed.length) * 100) : 0;
+    const streak = currentStreak(elapsed, todayKey);
+
+    statCumplimiento.textContent = `${pct}%`;
+    statHechas.textContent = `${done.length} / ${elapsed.length}`;
+    statRacha.textContent = String(streak);
+    statBarFill.style.width = `${pct}%`;
+    statBarFill.setAttribute('aria-valuenow', String(pct));
+    statDetail.textContent = elapsed.length > 0
+      ? `${done.length} hechas · ${skipped.length} omitidas · ${pending.length} pendientes de ${elapsed.length} planificadas.`
+      : 'Todavía no hay sesiones planificadas en el programa.';
+  }
+
+  renderProgression();
+}
+
+// A line per completed session with logged reps: date, weight, total reps.
+function exercisePoints(exercise) {
+  const points = [];
+  trainingDates().forEach((key) => {
+    const session = getSession(key);
+    if (!session || session.status !== 'done') return;
+    const raw = session.exercises && session.exercises[exercise.name];
+    if (!isPlainObject(raw) || !Array.isArray(raw.sets)) return;
+    const sets = raw.sets.map(toNumber);
+    const totalReps = sets.reduce((sum, value) => sum + value, 0);
+    if (totalReps <= 0) return;
+    points.push({
+      key,
+      weight: toNumber(raw.weight),
+      totalReps,
+      maxSet: Math.max(...sets),
+    });
+  });
+  return points;
+}
+
+function sparklineSVG(values) {
+  if (!Array.isArray(values) || values.length < 2) return '';
+  const width = 120;
+  const height = 32;
+  const pad = 3;
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = (max - min) || 1;
+  const step = (width - pad * 2) / (values.length - 1);
+  const points = values.map((value, index) => {
+    const x = pad + index * step;
+    const y = height - pad - ((value - min) / range) * (height - pad * 2);
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+
+  return `<svg class="spark" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" role="img" aria-hidden="true">`
+    + `<polyline points="${points}" fill="none" stroke="currentColor" stroke-width="2" `
+    + `stroke-linejoin="round" stroke-linecap="round"/>`
+    + `</svg>`;
+}
+
+function buildProgressionRow(exercise, points) {
+  const card = document.createElement('article');
+  card.className = 'progression-row';
+
+  const head = document.createElement('div');
+  head.className = 'progression-head';
+
+  const name = document.createElement('strong');
+  name.className = 'progression-name';
+  name.textContent = exercise.name;
+  head.appendChild(name);
+
+  if (points.length === 0) {
+    const none = document.createElement('span');
+    none.className = 'progression-none';
+    none.textContent = 'Sin datos todavía';
+    head.appendChild(none);
+    card.appendChild(head);
+    return card;
+  }
+
+  const last = points[points.length - 1];
+  const prev = points.length > 1 ? points[points.length - 2] : null;
+
+  const badge = document.createElement('span');
+  badge.className = 'exercise-badge';
+  badge.textContent = `${last.totalReps} reps`;
+  head.appendChild(badge);
+  card.appendChild(head);
+
+  const body = document.createElement('div');
+  body.className = 'progression-body';
+
+  const trend = document.createElement('span');
+  trend.className = 'progression-trend';
+  const type = getExerciseType(exercise.name);
+  if (prev && (last.weight !== prev.weight || last.totalReps !== prev.totalReps)) {
+    // Weighted exercises move against load first, bodyweight against volume.
+    const grew = type !== 'bodyweight' && last.weight !== prev.weight
+      ? last.weight > prev.weight
+      : last.totalReps > prev.totalReps;
+    trend.textContent = grew ? '↑' : '↓';
+    trend.classList.add(grew ? 'up' : 'down');
+  } else {
+    trend.textContent = prev ? '=' : '—';
+    trend.classList.add('flat');
+  }
+  body.appendChild(trend);
+
+  const spark = document.createElement('div');
+  spark.className = 'progression-spark';
+  spark.innerHTML = sparklineSVG(points.map((point) => point.totalReps));
+  body.appendChild(spark);
+
+  const detail = document.createElement('span');
+  detail.className = 'progression-detail';
+  detail.textContent = type !== 'bodyweight' ? `${last.weight} kg` : `Tu mejor serie: ${last.maxSet}`;
+  body.appendChild(detail);
+
+  card.appendChild(body);
+  return card;
+}
+
+function renderProgression() {
+  if (!progressionList) return;
+  progressionList.innerHTML = '';
+  EXERCISES.forEach((exercise) => {
+    progressionList.appendChild(buildProgressionRow(exercise, exercisePoints(exercise)));
   });
 }
 
@@ -814,8 +1083,7 @@ function saveStartDate() {
   state.startDate = value;
   saveState();
   closeStartDateDialog();
-  renderCalendar();
-  renderSession();
+  renderApp();
   showStatus('✓ Fecha de inicio actualizada', 'success');
 }
 
@@ -857,9 +1125,9 @@ function importData(file) {
     }
 
     saveState();
-    renderCalendar();
     state.selectedDate = null;
-    renderSession();
+    state.view = 'calendar';
+    renderApp();
     renderExerciseReference();
     showStatus('✓ Datos importados correctamente', 'success');
   };
@@ -867,6 +1135,23 @@ function importData(file) {
 }
 
 function bindEvents() {
+  document.querySelectorAll('.nav-tab[data-view]').forEach((tab) => {
+    tab.addEventListener('click', () => {
+      if (tab.dataset.view === 'stats') {
+        state.selectedDate = null;
+        state.view = 'stats';
+        renderApp();
+      } else {
+        showCalendarView();
+      }
+    });
+  });
+
+  const backBtn = document.getElementById('btnVolver');
+  if (backBtn) {
+    backBtn.addEventListener('click', showCalendarView);
+  }
+
   const todayBtn = document.getElementById('btnHoy');
   if (todayBtn) {
     todayBtn.addEventListener('click', () => {
@@ -881,8 +1166,7 @@ function bindEvents() {
           state.selectedDate = toDateKey(nextTraining);
         }
       }
-      renderCalendar();
-      renderSession();
+      renderApp();
     });
   }
 
@@ -921,7 +1205,7 @@ function bindEvents() {
   if (exportBtn) {
     exportBtn.addEventListener('click', exportData);
   }
-  
+
   importInput.addEventListener('change', (e) => importData(e.target.files?.[0]));
 
   document.querySelectorAll('[data-status]').forEach((button) => {
@@ -939,6 +1223,5 @@ function bindEvents() {
 // Inicializar
 loadState();
 bindEvents();
-renderCalendar();
-renderSession();
+renderApp();
 renderExerciseReference();
