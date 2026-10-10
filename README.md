@@ -25,17 +25,8 @@ Calentá 5 minutos con movimiento suave. Descansá 60-90 segundos entre series, 
 
 ## Qué incluye
 
-- Calendario de 12 semanas con el estado de cada sesión: hecha, omitida o pendiente
-- Carga por ejercicio: **Flexiones** y **sentarse y levantarse de una silla** son peso corporal y no muestran campo de peso; los otros cuatro arrancan en 2 kg
-- Series dinámicas: con `+ Serie` y `− Serie` cambiás cuántas series hacés de cada ejercicio. El número inicial es el que pide la receta
-- Técnica de cada ejercicio disponible dos veces: en la tarjeta del ejercicio (`Cómo se hace`) y en la sección **Ejercicios** de la referencia
-- Fecha de inicio configurable, para arrancar cuando quieras y no el lunes de la semana 1
-- Notas y sensación por sesión
-- Exportación e importación de datos en JSON
-- Mobile first: está pensada para el teléfono, no hay scroll horizontal a 360px
-- 100% estático: HTML, CSS y JavaScript vanilla
-
-Lo que **no** tiene: ni gráfico ni comparación de progreso a lo largo del tiempo. Es un registro, no un dashboard.
+- Sesión guiada por pantallas: al elegir un día el calendario se oculta y vas ejercicio por ejercicio. Cada tarjeta se minimiza/expande, con botón "Listo, siguiente" para pasar al siguiente.
+- Estadísticas: adherencia (hechas vs planificadas, racha) y progresión por ejercicio (peso, tendencia y gráfico de reps).
 
 ## Cómo probarlo localmente
 
