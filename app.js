@@ -1037,19 +1037,30 @@ function updateStartDateWarning() {
 
   startDateWarning.classList.remove('is-invalid');
 
-  const outside = countSessionsOutsideWindow(value);
-  if (outside === 0) {
-    startDateWarning.textContent = 'Todas tus sesiones guardadas quedan dentro de la ventana de 12 semanas.';
-    return;
+  let aligned = value;
+  const parsed = parseDateKey(value);
+  if (parsed instanceof Date && !TRAINING_DAYS.includes(parsed.getDay())) {
+    const next = new Date(parsed);
+    for (let i = 1; i <= 7; i++) {
+      next.setDate(parsed.getDate() + i);
+      if (TRAINING_DAYS.includes(next.getDay())) {
+        aligned = toDateKey(next);
+        break;
+      }
+    }
+    startDateWarning.textContent = `Ese día no es de entrenamiento. Se ajustará al ${aligned} (Lun/Mié/Vie).`;
+  } else {
+    const outside = countSessionsOutsideWindow(value);
+    if (outside === 0) {
+      startDateWarning.textContent = 'Todas tus sesiones guardadas quedan dentro de la ventana de 12 semanas.';
+    } else {
+      const noun = outside === 1 ? 'sesión guardada' : 'sesiones guardadas';
+      const suffix = outside === 1
+        ? 'quedaría fuera de la ventana de 12 semanas'
+        : 'quedarían fuera de la ventana de 12 semanas';
+      startDateWarning.textContent = `${outside} ${noun} ${suffix}. No se borran, pero el calendario no las va a mostrar.`;
+    }
   }
-
-  const noun = outside === 1 ? 'sesión guardada' : 'sesiones guardadas';
-  const suffix = outside === 1
-    ? 'quedaría fuera de la ventana de 12 semanas'
-    : 'quedarían fuera de la ventana de 12 semanas';
-
-  startDateWarning.textContent =
-    `${outside} ${noun} ${suffix}. No se borran, pero el calendario no las va a mostrar.`;
 }
 
 function openStartDateDialog() {
@@ -1075,12 +1086,31 @@ function closeStartDateDialog() {
 function saveStartDate() {
   const value = startDateInput.value;
   if (!parseDateKey(value)) {
-    // updateStartDateWarning() switches the message to the invalid state.
     updateStartDateWarning();
     return;
   }
 
-  state.startDate = value;
+  let aligned = value;
+  const parsed = parseDateKey(aligned);
+  if (parsed instanceof Date) {
+    // Align to the next training day if the chosen start date is not a training day.
+    // The program always runs on Monday/Wednesday/Friday; keeping the block aligned
+    // preserves the "Lun/Mié/Vie" calendar structure without breaking existing data.
+    const day = parsed.getDay();
+    if (!TRAINING_DAYS.includes(day)) {
+      const next = new Date(parsed);
+      // Advance at most 6 days to find the next training day.
+      for (let i = 1; i <= 7; i++) {
+        next.setDate(parsed.getDate() + i);
+        if (TRAINING_DAYS.includes(next.getDay())) {
+          aligned = toDateKey(next);
+          break;
+        }
+      }
+    }
+  }
+
+  state.startDate = aligned;
   saveState();
   closeStartDateDialog();
   renderApp();
