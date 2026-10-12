@@ -890,9 +890,11 @@ function currentStreak(elapsed, todayKey) {
       streak++;
     } else if (session && session.status === 'skipped') {
       break;
-    } else if (elapsed[i] === todayKey) {
-      // Today's session is 'pending' simply because it has not arrived yet.
+    } else if (elapsed[i] === todayKey && (!session || session.status === 'pending')) {
+      // Today's session not yet done - don't break streak
       continue;
+    } else if (!session || session.status === 'pending') {
+      break;
     } else {
       break;
     }
