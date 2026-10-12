@@ -799,6 +799,7 @@ function renderSession() {
   renderLegacyNotice(session);
 
   const activeName = resolveActiveExercise(session);
+  const allDone = EXERCISES.every((exercise) => exerciseData(session, exercise).done);
 
   exerciseList.innerHTML = '';
   EXERCISES.forEach((exercise, index) => {
@@ -809,6 +810,25 @@ function renderSession() {
   document.querySelectorAll('[data-status]').forEach((button) => {
     button.classList.toggle('active', button.dataset.status === session.status);
   });
+
+  // Show a gentle completion message when all exercises are done.
+  const existingMsg = document.getElementById('sessionDoneMessage');
+  if (allDone) {
+    if (!existingMsg) {
+      const msg = document.createElement('p');
+      msg.id = 'sessionDoneMessage';
+      msg.className = 'session-done';
+      msg.textContent = '¡Sesión completa ✓';
+      const container = exerciseList.parentElement;
+      if (container) {
+        container.insertBefore(msg, exerciseList.nextSibling);
+      }
+    }
+  } else {
+    if (existingMsg) {
+      existingMsg.remove();
+    }
+  }
 }
 
 function updateSelectedSession(status) {
