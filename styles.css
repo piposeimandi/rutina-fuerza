@@ -871,6 +871,23 @@ textarea {
   color: var(--accent);
 }
 
+.progression-bars {
+  display: flex;
+  align-items: end;
+  gap: 3px;
+  height: 32px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.progression-bar {
+  flex: 1 1 0;
+  min-width: 4px;
+  background: var(--accent);
+  border-radius: 2px;
+  opacity: 0.8;
+}
+
 .spark {
   display: block;
   width: 100%;

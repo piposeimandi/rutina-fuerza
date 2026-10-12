@@ -1021,6 +1021,20 @@ function buildProgressionRow(exercise, points) {
   spark.innerHTML = sparklineSVG(points.map((point) => point.totalReps));
   body.appendChild(spark);
 
+  // Bar chart showing total reps per session
+  const barChart = document.createElement('div');
+  barChart.className = 'progression-bars';
+  const maxReps = Math.max(...points.map((p) => p.totalReps));
+  points.forEach((point) => {
+    const bar = document.createElement('div');
+    bar.className = 'progression-bar';
+    const height = maxReps > 0 ? (point.totalReps / maxReps) * 100 : 0;
+    bar.style.height = `${Math.max(4, height)}%`;
+    bar.title = `${point.key}: ${point.totalReps} reps`;
+    barChart.appendChild(bar);
+  });
+  body.appendChild(barChart);
+
   const detail = document.createElement('span');
   detail.className = 'progression-detail';
   detail.textContent = type !== 'bodyweight' ? `${last.weight} kg` : `Tu mejor serie: ${last.maxSet}`;
